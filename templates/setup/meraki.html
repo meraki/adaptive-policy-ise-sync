@@ -1,0 +1,80 @@
+{% extends 'setup/base.html' %}
+
+{% block content %}
+    <form class="md-panel__form" method="POST" action="/setup/sync">
+        {% csrf_token %}
+        <div class="md-input-group">
+            <div class="md-input__icon-container">
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="apiUrl">
+                            <span style="float:left">Meraki Dashboard API URL</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            {% if data.baseurl %}
+                                <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="apiUrl" name="apiUrl" placeholder="API URL" value="{{ data.baseurl }}">
+                            {% else %}
+                                <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="apiUrl" name="apiUrl" placeholder="API URL" value="https://api.meraki.com/api/v1">
+                            {% endif %}
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('apiUrl')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="apiKey">
+                            <span style="float:left">Meraki Dashboard API Key</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input class="md-input md-input--after md-dirty" tabindex="20" type="text" id="apiKey" name="apiKey" placeholder="API Key" value="{{ data.apikey }}" onchange="getdata('/orgs', 'apiUrl', null, 1, 'apiKey', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="120" onclick="clearinput('apiKey')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6" id="orgcontainer" style="display:none;">
+                        <div class="md-input__wrapper md-select">
+                            <button id="btnorg" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="orglabel" tabindex="30" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('btnorg', 'dropdownorg', 'listorg')">
+                                <span class="ignore md-button__children" style="opacity: 1;">
+                                    <div class="ignore md-select__label" id="orglabel">
+                                        Select Organization
+                                        <i class="ignore icon icon-arrow-down_16"></i>
+                                    </div>
+                                </span>
+                            </button>
+                            <div class="md-event-overlay md-event-overlay--bottom" id="dropdownorg" style="display:none;">
+                                <div class="md-event-overlay__children" id="listorg">
+                                    <div id="orgcontent" class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row"><br></div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper">
+                            <button name="nextbtn" id="nextbtn" class="md-button md-button--disabled">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if data.apikey %}
+            <script>
+                getdata('/orgs', 'apiUrl', '{{ data.orgid }}', 1, 'apiKey', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')
+            </script>
+        {% endif %}
+        <input type="hidden" id="orgid" name="orgid" value="{{ data.orgid }}" />
+        <input type="hidden" id="orgname" name="orgname" value="" />
+    </form>
+{% endblock %}

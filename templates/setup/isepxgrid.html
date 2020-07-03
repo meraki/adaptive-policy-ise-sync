@@ -1,0 +1,160 @@
+{% extends 'setup/base.html' %}
+
+{% block content %}
+    <form class="md-panel__form" method="POST" action="/setup/meraki">
+        {% csrf_token %}
+        <div class="md-input-group">
+            <div class="md-input__icon-container">
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="pxgridIP">
+                            <span style="float:left">IP or FQDN of pxGrid Server</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="pxgridIP" name="pxgridIP" placeholder="IP or FQDN" value="{{ data.pxgrid_ip }}">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('pxgridIP')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="pxgridClient">
+                            <span style="float:left">pxGrid Client Name</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input class="md-input md-input--after md-dirty" tabindex="20" type="text" id="pxgridClient" name="pxgridClient" placeholder="Client Name" value="{{ data.pxgrid_cliname }}">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="120" onclick="clearinput('pxgridClient')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper md-select">
+                            <button id="btnclientcert" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="labelclientcert" tabindex="30" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('btnclientcert', 'dropdownclientcert', 'listclientcert')">
+                                <span class="ignore md-button__children" style="opacity: 1;">
+                                    <div class="ignore md-select__label" id="labelclientcert">
+                                        {% if data.pxgrid_clicert %}
+                                            {{ data.pxgrid_clicert.filename }}
+                                        {% else %}
+                                            Client Certificate (.cer)
+                                        {% endif %}
+                                        <i class="ignore icon icon-arrow-down_16"></i>
+                                    </div>
+                                </span>
+                            </button>
+                            <div class="md-event-overlay md-event-overlay--bottom" id="dropdownclientcert" style="display:none;">
+                                <div class="md-event-overlay__children" id="listclientcert">
+                                    <div class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                        {% for item in upload %}
+                                            <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="1000" title="{{ item.filename }}">
+                                                <div class="md-list-item__center" onclick="listclick('{{ item.id }}', '{{ item.filename }}', 'labelclientcert', 'clientcertid', 'clientcertname', null)">{{ item.filename }}</div>
+                                                <div class="md-list-item__right"></div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper md-select">
+                            <button id="btnclientkey" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="labelclientkey" tabindex="40" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('btnclientkey', 'dropdownclientkey', 'listclientkey')">
+                                <span class="ignore md-button__children" style="opacity: 1;">
+                                    <div class="ignore md-select__label" id="labelclientkey">
+                                        {% if data.pxgrid_clikey %}
+                                            {{ data.pxgrid_clikey.filename }}
+                                        {% else %}
+                                            Client Key (.key)
+                                        {% endif %}
+                                        <i class="ignore icon icon-arrow-down_16"></i>
+                                    </div>
+                                </span>
+                            </button>
+                            <div class="md-event-overlay md-event-overlay--bottom" id="dropdownclientkey" style="display:none;">
+                                <div class="md-event-overlay__children" id="listclientkey">
+                                    <div class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                        {% for item in upload %}
+                                            <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="1000" title="{{ item.filename }}">
+                                                <div class="md-list-item__center" onclick="listclick('{{ item.id }}', '{{ item.filename }}', 'labelclientkey', 'clientkeyid', 'clientkeyname', null)">{{ item.filename }}</div>
+                                                <div class="md-list-item__right"></div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="pxgridPassword">
+                            <span style="float:left">pxGrid Certificate Password</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input type="password" class="md-input md-input--after md-dirty" tabindex="50" type="text" id="pxgridPassword" name="pxgridPassword" placeholder="Password" value="{{ data.pxgrid_clipw }}">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="150" onclick="clearinput('pxgridPassword')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper md-select">
+                            <button id="btnservercert" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="labelservercert" tabindex="60" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('btnservercert', 'dropdownservercert', 'listservercert')">
+                                <span class="ignore md-button__children" style="opacity: 1;">
+                                    <div class="ignore md-select__label" id="labelservercert">
+                                        {% if data.pxgrid_isecert %}
+                                            {{ data.pxgrid_isecert.filename }}
+                                        {% else %}
+                                            Server Certificate (.cer)
+                                        {% endif %}
+                                        <i class="ignore icon icon-arrow-down_16"></i>
+                                    </div>
+                                </span>
+                            </button>
+                            <div class="md-event-overlay md-event-overlay--bottom" id="dropdownservercert" style="display:none;">
+                                <div class="md-event-overlay__children" id="listservercert">
+                                    <div class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                        {% for item in upload %}
+                                            <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="1000" title="{{ item.filename }}">
+                                                <div class="md-list-item__center" onclick="listclick('{{ item.id }}', '{{ item.filename }}', 'labelservercert', 'servercertid', 'servercertname', null)">{{ item.filename }}</div>
+                                                <div class="md-list-item__right"></div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row"><br></div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper">
+                            <button class="md-button md-button--blue">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" id="clientcertid" name="clientcertid" value="{{ data.pxgrid_clicert.id }}" />
+        <input type="hidden" id="clientcertname" name="clientcertname" value="{{ data.pxgrid_clicert.filename }}" />
+        <input type="hidden" id="clientkeyid" name="clientkeyid" value="{{ data.pxgrid_clikey.id }}" />
+        <input type="hidden" id="clientkeyname" name="clientkeyname" value="{{ data.pxgrid_clikey.filename }}" />
+        <input type="hidden" id="servercertid" name="servercertid" value="{{ data.pxgrid_isecert.id }}" />
+        <input type="hidden" id="servercertname" name="servercertname" value="{{ data.pxgrid_isecert.filename }}" />
+    </form>
+{% endblock %}

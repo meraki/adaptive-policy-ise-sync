@@ -1,0 +1,109 @@
+{% extends 'home/base.html' %}
+
+{% block content %}
+    <div class="md-data-table" style="width:100%;border-color:gray;border-style:solid;border-width:1px">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 2rem">
+                            <div class="md-input-group md-checkbox">
+                                <input id="check-all" name="check-all" type="checkbox" class="md-input md-checkbox__input" onchange="checkAll('md-checkbox__input', 'check-all')">
+                                <label class="md-checkbox__label" for="check-all">
+                                    <span>&nbsp;</span>
+                                </label>
+                             </div>
+                        </th>
+                        <th style="width: 4rem">Num</th>
+                        <th style="width: 8rem">Name</th>
+                        <th style="width: 12rem">Description</th>
+                        <th style="width: 7rem">Matches?</th>
+                        <th style="width: 12rem">Last Update</th>
+                        <th style="width: 16rem">ID</th>
+                        <th style="width: 4rem"></th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    {% for d in data.sgt %}
+                        {% if d.do_sync %}
+                            <tr><td>
+                        {% else %}
+                            <tr style="background-color:#dedede"><td>
+                        {% endif %}
+                            <div class="md-input-group md-checkbox">
+                                {% if d.do_sync %}
+                                    <input id="check-{{ d.id }}" name="check-{{ d.id }}" type="checkbox" class="md-input md-checkbox__input startchecked" onchange="checkOpt('check-{{ d.id }}')" checked>
+                                {% else %}
+                                    <input id="check-{{ d.id }}" name="check-{{ d.id }}" type="checkbox" class="md-input md-checkbox__input startunchecked" onchange="checkOpt('check-{{ d.id }}')">
+                                {% endif %}
+                                <label class="md-checkbox__label" for="check-{{ d.id }}">
+                                    <span>&nbsp;</span>
+                                </label>
+                             </div>
+                        </td><td> {{ d.tag_number }} </td><td> {{ d.name }} </td><td> {{ d.description }} </td>
+                        {% if d.do_sync %}
+                            {% if d.in_sync %}
+                                <td style="background-color:#55dd55"> {{ d.in_sync }} </td>
+                            {% elif d.ise_id and d.meraki_id %}
+                                <td style="background-color:#dd5555"> {{ d.in_sync }} </td>
+                            {% elif d.ise_id %}
+                                <td style="background-color:#dd5555"> Meraki Missing </td>
+                            {% else %}
+                                <td style="background-color:#dd5555"> ISE Missing </td>
+                            {% endif %}
+                        {% else %}
+                            {% if d.in_sync %}
+                                <td> {{ d.in_sync }} </td>
+                            {% elif d.ise_id and d.meraki_id %}
+                                <td> {{ d.in_sync }} </td>
+                            {% elif d.ise_id %}
+                                <td> Meraki Missing </td>
+                            {% else %}
+                                <td> ISE Missing </td>
+                            {% endif %}
+                        {% endif %}
+                        <td> {{ d.last_update }} </td><td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.id }} </a></td><td><a href="/home/status-sgt" onclick="doDelete('sgt', '{{ d.id }}')"><span class="icon icon-delete_24"></span></a></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row">&nbsp;</div>
+    <form method="POST" action="/home/sgtsave" style="width:100%;padding:0px">
+        <div id="bottom_save" style="display:none">
+            <div class="md-panel md-panel__form" style="width:100%;padding:0px">
+                {% csrf_token %}
+                <div class="md-input-group" style="width:100%;padding:20px;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
+                    <div class="md-input__icon-container">
+                        <div class="row" style="align-content:center; display:flex">
+                            <div class="md-input-container columns medium-6">
+                                <div class="md-input__wrapper">
+                                    <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="/home/status-sgt">cancel</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="corner_save" style="display:none">
+            <div class="md-panel__form" style="position:fixed;bottom:0;right:0;background-color:transparent;margin:0 0 0 0">
+                {% csrf_token %}
+                <div class="md-input-group" style="width:250px;padding:20px 0 20px 0;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
+                    <div class="md-input__icon-container">
+                        <div class="row" style="align-content:center;display:flex">
+                            <div class="md-input-container columns medium-6" style="margin:0 0 0 0">
+                                <div class="md-input__wrapper" style="text-align:center;white-space:nowrap;">
+                                    <b style="font-size:14px">You have unsaved changes.</b><br>
+                                    <button name="savebtn" id="savebtn" class="md-button md-button--blue" tabindex="50">Save</button> or <a href="/home/status-sgt">cancel</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" id="addlist" name="addlist" value="" />
+                <input type="hidden" id="sublist" name="sublist" value="" />
+            </div>
+        </div>
+    </form>
+{% endblock %}

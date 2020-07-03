@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://downloads.momentum-ui.com/@momentum-ui/core/css/momentum-ui.min.css" rel="stylesheet">
+    <title>Adaptive Policy Sync</title>
+    <script>
+        function clearinput(inputid) {
+            let src = document.getElementById(inputid);
+            src.value = "";
+        }
+
+        function toggleList(btnname, dropdownname, listname) {
+            let src = document.getElementById(btnname);
+
+            let rect = src.getBoundingClientRect();
+
+            let position = {
+                top: rect.top + window.pageYOffset,
+                left: rect.left + window.pageXOffset
+            };
+            let sc = document.documentElement.scrollTop;
+
+            if (document.getElementById(dropdownname).style.display === "none") {
+                document.getElementById(listname).style.left = position.left.toString() + "px";
+                document.getElementById(listname).style.top = (position.top + src.offsetHeight + 5 - sc).toString() + "px";
+                document.getElementById(listname).style.width = src.offsetWidth.toString() + "px";
+                document.getElementById(dropdownname).style.display = "inline";
+            } else {
+                document.getElementById(dropdownname).style.display = "none";
+            }
+        }
+
+        function getdata(url, apiurl, selectedval, outtype, tokenid, outputcontid, outputid, outputlabel, hiddenid, hiddenname, enablebtn) {
+            document.getElementById('preloader').style = "display:inline-block;position:absolute;top:50%;left:50%;background-color:rgba(0, 0, 0, 0);z-index:6000000;overflow:auto;width:400px;height:400px;margin-left:-100px;margin-top:-100px;";
+            let method = "GET";
+            let async = true;
+            let request = new XMLHttpRequest();
+            let apikey = document.getElementById(tokenid).value;
+            let apibaseurl = document.getElementById(apiurl).value;
+            console.log(apibaseurl);
+            request.onload = function () {
+                if (request.readyState === 4) {
+                    if (request.status === 200) {
+                        let data = request.response;
+                        let outcont = document.getElementById(outputcontid);
+                        let outdata = document.getElementById(outputid);
+                        if (data.length > 0) {
+                            {#out.style = "display:inline;";#}
+                            {#out.innerHTML = "<font color='red'>Error Issuing Request</font>";#}
+                            let out_data = "";
+                            for (let elm in data)
+                            {
+                                if (outtype === 1) {
+                                    out_data += '<div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" value="' + data[elm].id + '" tabindex="0" title="' + data[elm].name + '">';
+                                    out_data += '  <div class="md-list-item__center" id="' + data[elm].id + '" onclick="listclick(\'' + data[elm].id + '\', \'' + data[elm].name + '\', \'' + outputlabel + '\', \'' + hiddenid + '\', \'' + hiddenname + '\', \'' + enablebtn + '\')")>' + data[elm].name + '</div>';
+                                    out_data += '  <div class="md-list-item__right"></div>';
+                                    out_data += '</div>';
+                                    if (selectedval) {
+                                        if (selectedval === data[elm].id) {
+                                            let selectedname = data[elm].name;
+                                            listclick(selectedval, selectedname, outputlabel, hiddenid, hiddenname, enablebtn);
+                                        }
+                                    }
+                                }
+                            }
+                            if (outtype === 1) {
+                                outcont.style = "display:inline;";
+                                outdata.innerHTML = out_data;
+                            }
+                            document.getElementById('preloader').style = "display: none;";
+                        } else {
+                            {#outcont.style = "display:inline;";#}
+                            {#outdata.innerHTML = "<font color='red'>No Results Returned</font>";#}
+                            document.getElementById('preloader').style = "display: none;";
+                        }
+                    }
+                }
+            };
+            try {
+                request.open(method, url, async);
+                request.setRequestHeader("X-Cisco-Meraki-API-URL", apibaseurl);
+                request.setRequestHeader("X-Cisco-Meraki-API-Key", apikey);
+                request.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+                request.responseType = 'json';
+                request.send();
+            }
+            catch(err) {
+                console.log("500 Caught.");
+            }
+        }
+
+        function listclick(elemid, elemname, divsel, divid, divname, enablebtn) {
+            document.getElementById(divsel).innerHTML = elemname + '\n<i class="ignore icon icon-arrow-down_16"></i>';
+            document.getElementById(divid).value = elemid;
+            document.getElementById(divname).value = elemname;
+            if (enablebtn) {
+                document.getElementById(enablebtn).classList.remove("md-button--disabled");
+                document.getElementById(enablebtn).classList.add("md-button--blue");
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="preloader" style="display: none;"><img src="https://apps.cisco.com/Commerce/staticContent/ngws_Q3FY20_V2/images/preloader.gif" /></div>
+    <div class="md-panel md-panel--form md-panel--full">
+        <div class="md-panel__main">
+            <img alt="" class="md-panel__image" src="https://meraki.cisco.com/img/cisco-meraki-logo.png">
+            <div class="md-tab md-tab--pills md-tab--justified" type="pills">
+                <ul class="md-tab__list" role="tab">
+                    {% if active == 1 %}
+                        <li class="md-tab__item active">
+                            <a role="tab" href="/setup" aria-current="true">Setup</a>
+                    {% else %}
+                        <li class="md-tab__item">
+                            <a role="tab" href="/setup" aria-current="false">Setup</a>
+                    {% endif %}
+                    </li>
+                    {% if active == 2 %}
+                        <li class="md-tab__item active">
+                            <a role="tab" href="/setup/ise" aria-current="true">ISE Server</a>
+                    {% else %}
+                        <li class="md-tab__item">
+                            <a role="tab" href="/setup/ise" aria-current="false">ISE Server</a>
+                    {% endif %}
+                    </li>
+                    {% if active == 3 %}
+                        <li class="md-tab__item active">
+                            <a role="tab" href="/setup/isecert" aria-current="true">ISE Certificate</a>
+                    {% else %}
+                        <li class="md-tab__item">
+                            <a role="tab" href="/setup/isecert" aria-current="false">ISE Certificate</a>
+                    {% endif %}
+                    </li>
+                    {% if active == 4 %}
+                        <li class="md-tab__item active">
+                            <a role="tab" href="/setup/isepxgrid" aria-current="true">ISE pxGrid</a>
+                    {% else %}
+                        <li class="md-tab__item">
+                            <a role="tab" href="/setup/isepxgrid" aria-current="false">ISE pxGrid</a>
+                    {% endif %}
+                    </li>
+                    {% if active == 5 %}
+                        <li class="md-tab__item active">
+                            <a role="tab" href="/setup/meraki" aria-current="true">Meraki Dashboard</a>
+                    {% else %}
+                        <li class="md-tab__item">
+                            <a role="tab" href="/setup/meraki" aria-current="false">Meraki Dashboard</a>
+                    {% endif %}
+                    </li>
+                    {% if active == 6 %}
+                        <li class="md-tab__item active">
+                            <a role="tab" href="/setup/sync" aria-current="true">Sync Settings</a>
+                    {% else %}
+                        <li class="md-tab__item">
+                            <a role="tab" href="/setup/sync" aria-current="false">Sync Settings</a>
+                    {% endif %}
+                    </li>
+                </ul>
+            </div>
+            <div><br></div>
+            {% block content %}
+            {% endblock %}
+       </div>
+       <div class="md-panel__footer">
+          <div class="footer__logo">
+             <i class="icon icon-cisco-logo"></i>
+          </div>
+       </div>
+    </div>
+    <script>
+        document.body.addEventListener("click", function (evt) {
+            if (evt.target) {
+                if (evt.target.className.split(' ').indexOf("ignore") >= 0) {
+                    // Don't close the menu if someone is trying to click on it
+                } else {
+                    // If you click on something other than a menu, close all menus
+                    let all = document.getElementsByTagName("*");
+                    for (let i=0, max=all.length; i < max; i++) {
+                        if (all[i].id) {
+                            if (all[i].id.search("dropdown") >= 0) {
+                                {#console.log(all[i].id);#}
+                                all[i].style.display = "none";
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+    </body>
+</html>

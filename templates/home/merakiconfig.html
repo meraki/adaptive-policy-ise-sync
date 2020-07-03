@@ -1,0 +1,30 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 8rem">Field</th>
+                        <th style="width: 32rem">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    <tr><td>Description</td><td>{{ data.description }}</td></tr>
+                    <tr><td>API Base URL</td><td>{{ data.baseurl }}</td></tr>
+                    <tr><td>API Key</td><td>{{ data.apikey }}</td></tr>
+                    <tr><td>Organization ID</td><td>{{ data.orgid }}</td></tr>
+                    <tr><td>Dashboard Raw Data</td><td><pre>{{ data.raw_data|pretty_json|safe }}</pre></td></tr>
+                    <tr><td>Enable Webhooks?</td><td>{{ data.webhook_enable }}</td></tr>
+                    <tr><td>Use ngrok for Webhooks?</td><td>{{ data.webhook_ngrok }}</td></tr>
+                    <tr><td>Webhook URL</td><td>{{ data.webhook_url }}</td></tr>
+                    <tr><td>Force Manual Sync</td><td>{{ data.force_rebuild }}</td></tr>
+                    <tr><td>Last Database Update</td><td>{{ data.last_update }}</td></tr>
+                    <tr><td>Last Sync</td><td>{{ data.last_sync }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'home/base.html' %}
+
+{% block content %}
+    <div class="md-data-table" style="width: 100%;border-color:gray;border-style:solid;border-width:1px">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 16rem">Name</th>
+                        <th style="width: 8rem">SGT Mapping</th>
+                        <th style="width: 7rem">Matches?</th>
+                        <th style="width: 12rem">Last Update</th>
+                        <th style="width: 16rem">ID</th>
+                        <th style="width: 4rem"></th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    {% for d in data.policy %}
+                        {% if d.do_sync %}
+                            <tr>
+                        {% else %}
+                            <tr style="background-color:#dedede">
+                        {% endif %}
+                        <td> {{ d.name }} </td><td> {{ d.mapping }} </td>
+                        {% if not d.do_sync %}
+                            <td>SGT Not Synced</td>
+                        {% elif d.in_sync %}
+                            <td style="background-color:#55dd55"> {{ d.in_sync }} </td>
+                        {% elif d.ise_id and d.meraki_id %}
+                            <td style="background-color:#dd5555"> {{ d.in_sync }} </td>
+                        {% elif d.ise_id %}
+                            <td style="background-color:#dd5555"> Meraki Missing </td>
+                        {% else %}
+                            <td style="background-color:#dd5555"> ISE Missing </td>
+                        {% endif %}
+                        <td> {{ d.last_update }} </td><td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.id }} </a></td><td><a href="/home/status-policy" onclick="doDelete('policy', '{{ d.id }}')"><span class="icon icon-delete_24"></span></a></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

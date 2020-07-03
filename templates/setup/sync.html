@@ -1,0 +1,88 @@
+{% extends 'setup/base.html' %}
+
+{% block content %}
+    <form class="md-panel__form" method="POST" action="/setup/done">
+        {% csrf_token %}
+        <div class="md-input-group">
+            <div class="md-input__icon-container">
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="basicRadio">
+                            <span style="float:left">Authoritative Source</span>
+                        </label>
+                        <div class="md-input__wrapper" style="float:left">
+                            {% if data.ise_source or default_sync %}
+                                <div class="md-input-container md-radio" style="float:left">
+                                    <input value="ise" type="radio" class="md-input md-radio__input" tabindex="10" id="basicRadio1" name="basicRadio" checked>
+                                    <label class="md-radio__label" for="basicRadio1">
+                                        <span name="label_ise" id="label_ise">Cisco ISE</span>
+                                    </label>
+                                </div>
+                                <div class="md-input-container md-radio" style="float:left">
+                                    <input value="meraki" type="radio" class="md-input md-radio__input" tabindex="20" id="basicRadio2" name="basicRadio">
+                                    <label class="md-radio__label" for="basicRadio2">
+                                        <span name="label_meraki" id="label_meraki">Meraki Dashboard</span>
+                                    </label>
+                                </div>
+                            {% else %}
+                                <div class="md-input-container md-radio" style="float:left">
+                                    <input value="ise" type="radio" class="md-input md-radio__input" tabindex="10" id="basicRadio1" name="basicRadio">
+                                    <label class="md-radio__label" for="basicRadio1">
+                                        <span name="label_ise" id="label_ise">Cisco ISE</span>
+                                    </label>
+                                </div>
+                                <div class="md-input-container md-radio" style="float:left">
+                                    <input value="meraki" type="radio" class="md-input md-radio__input" tabindex="20" id="basicRadio2" name="basicRadio" checked>
+                                    <label class="md-radio__label" for="basicRadio2">
+                                        <span name="label_meraki" id="label_meraki">Meraki Dashboard</span>
+                                    </label>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="syncInterval">
+                            <span style="float:left">Manual Synchronization Interval</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            {% if not data.sync_interval or default_sync %}
+                                <input class="md-input md-input--after md-dirty" tabindex="30" type="text" id="syncInterval" name="syncInterval" placeholder="Interval (seconds)" value="300">
+                            {% else %}
+                                <input class="md-input md-input--after md-dirty" tabindex="30" type="text" id="syncInterval" name="syncInterval" placeholder="Interval (seconds)" value="{{ data.sync_interval }}">
+                            {% endif %}
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="11" onclick="clearinput('syncInterval')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input-group md-checkbox">
+                            {% if data.sync_enabled or default_sync %}
+                                <input name="do_sync" value="true" id="do_sync" type="checkbox" class="md-input md-checkbox__input" tabindex="40" checked>
+                            {% else %}
+                                <input name="do_sync" value="true" id="do_sync" type="checkbox" class="md-input md-checkbox__input" tabindex="40">
+                            {% endif %}
+                            <label class="md-checkbox__label" for="do_sync">
+                                <span>Enable Synchronization</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row"><br></div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper">
+                            <button name="finishbtn" id="finishbth" class="md-button md-button--blue" tabindex="50">Finish</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}
