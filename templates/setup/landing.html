@@ -1,0 +1,10 @@
+{% extends 'setup/base.html' %}
+
+{% block content %}
+    <div class="md-panel__title">Welcome to Adaptive Policy Sync. This wizard will help you set up policy sync between your Cisco ISE server and your Meraki Dashboard. To continue, please click 'Start Now'.</div>
+    <form class="md-panel__form" method="GET" action="/setup/ise">
+        <div class="md-panel__cta">
+            <button id="start" name="start" class="md-button md-button--blue">Start Now</button>
+        </div>
+    </form>
+{% endblock %}
