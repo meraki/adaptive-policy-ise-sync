@@ -1,0 +1,28 @@
+version: v1.0
+name: Pipeline 2
+blocks:
+  - name: Docker build
+    task:
+      jobs:
+        - name: Build
+          commands:
+            - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
+            - 'docker pull $DOCKER_USERNAME/adaptive-policy-sync:latest || true'
+            - 'docker build --cache-from=$DOCKER_USERNAME/adaptive-policy-sync:latest -t $DOCKER_USERNAME/adaptive-policy-sync:latest .'
+            - 'docker push $DOCKER_USERNAME/adaptive-policy-sync:latest'
+      secrets:
+        - name: dockerhub
+      prologue:
+        commands:
+          - sem-version python 3.7
+          - checkout
+          - cache restore
+          - mkdir -p .pip_cache
+          - mkdir -p config
+          - pip install --cache-dir .pip_cache -r requirements.txt
+          - 'python manage.py makemigrations '
+          - python manage.py migrate
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
