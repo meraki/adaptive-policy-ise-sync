@@ -1,0 +1,30 @@
+[run]
+source=
+    .
+omit=
+    # Ignore - part of pytest
+    ./conftest.py
+    # ISE Library - "External"
+    ./ise.py
+    # Not going to test everything in virtualenv
+    ./venv/*
+    # Old code that isn't pushed to repo
+    ./old/*
+    # Django (Migrations & Manage)
+    ./manage.py
+    ./migrations/*
+    # Config file with private data
+    ./_config.py
+    # Sample config, which won't be used in testing
+    ./_config_sample.py
+    # Simulators; only used in basic dev functionality; not up to date
+    ./scripts/base_simulator.py
+    ./scripts/dashboard_simulator.py
+    ./scripts/ise_ers_simulator.py
+    ./scripts/reset.py
+    # Dashboard webhooks, which aren't useful for Adaptive Policy
+    ./scripts/dashboard_webhook.py
+    ./scripts/dashboard_webhook_handler.py
+    # Not using ASGI or WSGI for testing
+    ./adaptive_policy_sync/asgi.py
+    ./adaptive_policy_sync/wsgi.py

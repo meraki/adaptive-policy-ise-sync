@@ -1,0 +1,31 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 8rem">Field</th>
+                        <th style="width: 32rem">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    <tr><td>Description</td><td>{{ data.description }}</td></tr>
+                    <tr><td>Meraki Dashboard</td><td>{{ data.dashboard }}</td></tr>
+                    <tr><td>ISE Server</td><td>{{ data.iseserver }}</td></tr>
+                    {% if data.ise_source %}
+                        <tr><td>Source of Truth</td><td>ISE</td></tr>
+                    {% else %}
+                        <tr><td>Source of Truth</td><td>Meraki Dashboard</td></tr>
+                    {% endif %}
+                    <tr><td>Enable DB Sync?</td><td>{{ data.sync_enabled }}</td></tr>
+                    <tr><td>Enable Sync Updates?</td><td>{{ data.apply_changes }}</td></tr>
+                    <tr><td>Manual Sync Interval</td><td>{{ data.sync_interval }}</td></tr>
+                    <tr><td>Last Database Update</td><td>{{ data.last_update }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
