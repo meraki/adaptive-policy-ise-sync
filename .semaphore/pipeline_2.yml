@@ -7,9 +7,9 @@ blocks:
         - name: Build
           commands:
             - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
-            - 'docker pull $DOCKER_USERNAME/adaptive-policy-sync:latest || true'
-            - 'docker build --cache-from=$DOCKER_USERNAME/adaptive-policy-sync:latest -t $DOCKER_USERNAME/adaptive-policy-sync:latest .'
-            - 'docker push $DOCKER_USERNAME/adaptive-policy-sync:latest'
+            - 'docker pull $DOCKER_USERNAME/adaptive-policy-ise-sync:latest || true'
+            - 'docker build --cache-from=$DOCKER_USERNAME/adaptive-policy-ise-sync:latest -t $DOCKER_USERNAME/adaptive-policy-ise-sync:latest .'
+            - 'docker push $DOCKER_USERNAME/adaptive-policy-ise-sync:latest'
       secrets:
         - name: dockerhub
       prologue:
