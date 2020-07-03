@@ -1,4 +1,4 @@
-# adaptive-policy-sync<a name="top"/>
+# adaptive-policy-ise-sync<a name="top"/>
 
 ## Getting Started
 1) Compatibility
@@ -40,9 +40,9 @@
     - ~~Test Component Update on non-authoritative source (should be reverted)~~
     - ~~Test Component Deletes on authoritative source (should propegate)~~
     - ~~Test Component Deletes on non-authoritative source (should be reverted)~~
+    - ~~Test UI~~
     - Test pxGrid
     - Test API
-    - ~~Test UI~~
         
 ### Set up your environment
 
@@ -78,21 +78,21 @@
 #### Use Docker<a name="deploy-docker"/> ([^ Top](#top))
 ```
 mkdir $HOME/adaptivepolicy
-docker pull joshand/adaptive-policy-sync:latest
+docker pull joshand/adaptive-policy-ise-sync:latest
 docker run -it -p 8000:8020 \
      --restart unless-stopped \
-     --name=Adaptive-Policy-Sync \
+     --name=Adaptive-Policy-ISE-Sync \
      -e DJANGO_SUPERUSER_USERNAME=admin \
      -e DJANGO_SUPERUSER_PASSWORD=password \
      -e DJANGO_SUPERUSER_EMAIL=admin@example.com \
      -e DJANGO_SUPERUSER_APIKEY=1234567890abcdefghijklmnopqrstuvwxyz1234 \
      -v $HOME/adaptivepolicy:/opt/app/adaptive_policy_sync/config \
-     joshand/adaptive-policy-sync:latest
+     joshand/adaptive-policy-ise-sync:latest
 ```
 
 #### Clone the Github repo and run locally<a name="deploy-local"/> ([^ Top](#top))
 ```
-git clone https://github.com/joshand/adaptive-policy-sync.git
+git clone https://github.com/meraki/adaptive-policy-ise-sync.git
 cd adaptive-policy-sync/
 virtualenv venv --python=python3
 source venv/bin/activate
