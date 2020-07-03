@@ -1,0 +1,34 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 8rem">Field</th>
+                        <th style="width: 32rem">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    <tr><td>Description</td><td>{{ data.description }}</td></tr>
+                    <tr><td>ISE IP or FQDN</td><td>{{ data.ipaddress }}</td></tr>
+                    <tr><td>ISE ERS Username</td><td>{{ data.username }}</td></tr>
+                    <tr><td>ISE ERS Password</td><td>{{ data.password }}</td></tr>
+                    <tr><td>ISE Raw Data</td><td><pre>{{ data.raw_data|pretty_json|safe }}</pre></td></tr>
+                    <tr><td>Use pxGrid</td><td>{{ data.pxgrid_enable }}</td></tr>
+                    <tr><td>pxGrid IP or FQDN</td><td>{{ data.pxgrid_ip }}</td></tr>
+                    <tr><td>pxGrid Client Name</td><td>{{ data.pxgrid_cliname }}</td></tr>
+                    <tr><td>pxGrid Client Cert</td><td>{{ data.pxgrid_clicert }}</td></tr>
+                    <tr><td>pxGrid Client Key</td><td>{{ data.pxgrid_clikey }}</td></tr>
+                    <tr><td>pxGrid Cert Password</td><td>{{ data.pxgrid_clipw }}</td></tr>
+                    <tr><td>pxGrid Server Cert</td><td>{{ data.pxgrid_isecert }}</td></tr>
+                    <tr><td>Force Manual Sync</td><td>{{ data.force_rebuild }}</td></tr>
+                    <tr><td>Last Database Update</td><td>{{ data.last_update }}</td></tr>
+                    <tr><td>Last Sync</td><td>{{ data.last_sync }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

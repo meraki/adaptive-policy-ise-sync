@@ -1,0 +1,79 @@
+{% extends 'setup/base.html' %}
+
+{% block content %}
+{#    <div class="md-panel__title">Enter the IP Address or Fully Qualified Domain Name of your ISE Server, as well as a username and password for a user that has read/write access to the ERS API.</div>#}
+    <form class="md-panel__form" method="POST" action="/setup/isenext">
+        {% csrf_token %}
+        <div class="md-input-group">
+            <div class="md-input__icon-container">
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="iseIP">
+                            <span style="float:left">ISE Server IP or FQDN</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="iseIP" name="iseIP" placeholder="IP or FQDN" value="{{ data.ipaddress }}">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('iseIP')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="iseUser">
+                            <span style="float:left">ISE Server ERS Username</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input class="md-input md-input--after md-dirty" tabindex="20" type="text" id="iseUser" name="iseUser" placeholder="Username" value="{{ data.username }}">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="120" onclick="clearinput('iseUser')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="isePass">
+                            <span style="float:left">ISE Server ERS Password</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input type="password" class="md-input md-input--after md-dirty" tabindex="30" type="text" id="isePass" name="isePass" placeholder="Password" value="{{ data.password }}">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="130" onclick="clearinput('isePass')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input-group md-checkbox">
+                            {% if data.pxgrid_enable %}
+                                <input name="use_pxgrid" value="true" id="use_pxgrid" type="checkbox" class="md-input md-checkbox__input" tabindex="40" checked>
+                            {% else %}
+                                <input name="use_pxgrid" value="true" id="use_pxgrid" type="checkbox" class="md-input md-checkbox__input" tabindex="40">
+                            {% endif %}
+                            <label class="md-checkbox__label" for="use_pxgrid">
+                                <span>Enable pxGrid Integration</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row"><br></div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper">
+                            <button name="nextbtn" id="nextbtn" class="md-button md-button--blue" tabindex="50">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}
