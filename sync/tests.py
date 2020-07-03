@@ -136,6 +136,9 @@ def reset_ise(db=None, iseip=None, iseuser=None, isepass=None):
     sgacls = ise.get_sgacls(detail=True)
     sgpolicies = ise.get_egressmatrixcells(detail=True)
 
+    if not sgts or "response" not in sgts:
+        time.sleep(5)
+        sgts = ise.get_sgts(detail=True)
     for s in sgts["response"]:
         if s["value"] in sync._config.whitelisted_sgts or (s["value"] in default_sgts and
                                                            s["name"] in default_sgt_names):
@@ -144,11 +147,17 @@ def reset_ise(db=None, iseip=None, iseuser=None, isepass=None):
             print("Removing SGT", s["value"], "from Cisco ISE...")
             ise.delete_sgt(s["id"])
 
+    if not sgpolicies or "response" not in sgpolicies:
+        time.sleep(5)
+        sgpolicies = ise.get_egressmatrixcells(detail=True)
     for s in sgpolicies["response"]:
         if not s["name"] in sync._config.whitelisted_policies:
             print("Removing Egress Policy", s["name"], "from Cisco ISE...")
             ise.delete_egressmatrixcell(s["id"])
 
+    if not sgacls or "response" not in sgacls:
+        time.sleep(5)
+        sgacls = ise.get_sgacls(detail=True)
     for s in sgacls["response"]:
         if not s["name"] in (sync._config.whitelisted_sgacls + default_sgacls):
             print("Removing SGACL", s["name"], "from Cisco ISE...")
@@ -1478,10 +1487,9 @@ class BrowserTests(StaticLiveServerTestCase):
         super().tearDownClass()
 
     # @pytest.mark.django_db
-    # @classmethod
-    @staticmethod
+    # @staticmethod
     # https://medium.com/@bierus/end-2-end-testing-with-separated-fronted-f2a5dc5be12
-    # @pytest.mark.skip(reason="internal function")
+    @pytest.mark.skip(reason="internal function")
     def test_web_setup(self, src=None, ci=None, un=None):
         if not src or not ci or not un:
             pytest.skip("unsupported configuration")
