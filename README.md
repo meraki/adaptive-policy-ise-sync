@@ -32,9 +32,9 @@
 
 #### Testing Details
 1) Current Unit Tests Used before each Commit:
-    - [Unit Tests](https://htmlpreview.github.io/?https://github.com/joshand/adaptive-policy-sync/blob/master/pytest_report.html)
+    - [Unit Tests](https://htmlpreview.github.io/?https://github.com/meraki/adaptive-policy-ise-sync/blob/master/pytest_report.html)
 2) Current Code Coverage:
-    - [Test Coverage](https://htmlpreview.github.io/?https://github.com/joshand/adaptive-policy-sync/blob/master/htmlcov/index.html)
+    - [Test Coverage](https://htmlpreview.github.io/?https://github.com/meraki/adaptive-policy-ise-sync/blob/master/htmlcov/index.html)
 3) To Do:
     - ~~Add sample objects to Dashboard to better test sync from Dashboard -> ISE~~
     - ~~Test Component Update on non-authoritative source (should be reverted)~~
