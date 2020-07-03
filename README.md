@@ -93,7 +93,7 @@ docker run -it -p 8000:8020 \
 #### Clone the Github repo and run locally<a name="deploy-local"/> ([^ Top](#top))
 ```
 git clone https://github.com/meraki/adaptive-policy-ise-sync.git
-cd adaptive-policy-sync/
+cd adaptive-policy-ise-sync/
 virtualenv venv --python=python3
 source venv/bin/activate
 pip install -r requirements.txt
