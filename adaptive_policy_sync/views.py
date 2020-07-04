@@ -5,6 +5,10 @@ from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from .forms import UploadForm
 import meraki
+from scripts.db_backup import backup
+from scripts.db_restore import restore
+import os
+from pathlib import Path
 
 
 def startresync(request):
@@ -504,6 +508,37 @@ def certconfig(request):
     crumbs = '<li class="current">Configuration</li><li class="current">Certificates</li>'
     return render(request, 'home/certconfig.html', {"crumbs": crumbs, "menuopen": 2,
                                                     "data": {"zip": uploadzip, "file": upload}})
+
+
+def backuprestore(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    msg = None
+    if request.method == 'POST':
+        act = request.POST.get("action")
+        a_list = act.split("_")
+        action = a_list[0].upper()
+        if action == "BACKUP":
+            backup()
+            msg = "Database Backup Created"
+        elif action == "RESTORE":
+            restore(a_list[1])
+            msg = "Database Restored Successfully"
+        elif action == "DELETE":
+            os.remove(a_list[1])
+            msg = "Database Backup Deleted"
+
+    mypath = os.path.join(".", "config")
+    # f = []
+    # for (dirpath, dirnames, filenames) in os.walk(mypath):
+    #     f.extend(filenames)
+    #     break
+    f = sorted(Path(mypath).iterdir(), key=os.path.getmtime)
+
+    crumbs = '<li class="current">Configuration</li><li class="current">Backup/Restore</li>'
+    return render(request, 'home/backuprestore.html', {"crumbs": crumbs, "menuopen": 2,
+                                                       "data": f, "msg": msg})
 
 
 def iseconfig(request):
