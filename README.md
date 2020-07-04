@@ -11,10 +11,13 @@
 3) Deploy the Application
     - [Use Docker](#deploy-docker)
     - [Clone the Github repo and run locally](#deploy-local)
-4) Configure Adaptive Policy Sync
+4) [Configure Adaptive Policy Sync](#configure)
     - [Using the UI](#configure-ui)
     - [Using the API](#configure-api)
-5) [Troubleshooting](#troubleshooting)
+5) [Backup/Restore](#backup-restore)
+    - [Using the UI](#ui-backup-restore)
+    - [Using the API](#api-backup-restore)
+6) [Troubleshooting](#troubleshooting)
 
 ### Compatibility & Testing
 
@@ -112,7 +115,7 @@ Generated token 1234567890abcdefghijklmnopqrstuvwxyz1234 for user admin
 python manage.py runserver 8000
 ```
 
-## Configure Adaptive Policy Sync
+## Configure Adaptive Policy Sync<a name="configure"/>
 
 ### Using the UI<a name="configure-ui"/> ([^ Top](#top))
 1. Access your Adaptive Policy Sync Instance using the port that you've configured (http://127.0.0.1:8000 if you used the examples above)
@@ -324,6 +327,30 @@ python manage.py runserver 8000
         }
       ]
     }
+    ```
+
+## Backup/Restore<a name="backup-restore"/>
+
+### Using the UI<a name="ui-backup-restore"/> ([^ Top](#top))
+1. Open the Adaptive Policy Sync Interface. In the left navigation pane, navigate to Configuration -> Backup/Restore.
+    ![backup-restore](images/backup_restore.png)
+
+    - To create an immediate backup, click the "Backup Now" button. This will generate a backup file in JSON format, and will be stored in the "config" directory. If you are using the Docker command provided above, the config directory will map to the "adaptivepolicy" directory in your machine profile directory.
+        ![backup](images/backup.png)
+    
+    - To restore the database from a backup file, click the "Restore" button next to the backup file in question. The file will be loaded into the Database immediately.
+        ![restore](images/restore.png)
+
+### Using the API<a name="api-backup-restore"/> ([^ Top](#top))
+- To create an immediate backup, execute the Backup API call. The resulting backup file will be in JSON format, and will be stored in the "config" directory. If you are using the Docker command provided above, the config directory will map to the "adaptivepolicy" directory in your machine profile directory.
+    ```
+    curl -L -H "Authorization: Bearer 1234567890abcdefghijklmnopqrstuvwxyz1234" -H 'Content-Type: application/json' -X POST http://127.0.0.1:8000/api/v0/backup/
+    {"filename": "20200703-230325.json"}
+    ```
+- To restore the database from a backup file, execute the Restore API call. The file will be loaded into the Database immediately.
+    ```
+    curl -L -H "Authorization: Bearer 1234567890abcdefghijklmnopqrstuvwxyz1234" -H 'Content-Type: application/json' -X POST http://127.0.0.1:8000/api/v0/backup/
+    {"success": true}
     ```
 
 #### Troubleshooting<a name="troubleshooting"/> ([^ Top](#top))
