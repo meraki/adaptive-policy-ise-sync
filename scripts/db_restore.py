@@ -5,3 +5,7 @@ import os
 def run(backupname):
     fn = os.path.join("config", backupname)
     management.call_command('loaddata', fn)
+
+
+def restore(fn):
+    management.call_command('loaddata', fn)
