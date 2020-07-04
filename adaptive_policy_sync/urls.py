@@ -73,6 +73,9 @@ urlpatterns = [
     url(r'^home/config-ise$', apsyncviews.iseconfig, name='iseconfig'),
     url(r'^home/config-meraki$', apsyncviews.merakiconfig, name='merakiconfig'),
     url(r'^home/config-sync$', apsyncviews.syncconfig, name='syncconfig'),
+    url(r'^home/backup-restore$', apsyncviews.backuprestore, name='backuprestore'),
     url(r'^meraki/api/v1/organizations', meraki_parse_url, name='dashboardorgs'),
     url(r'^ise/ers/config/', ise_parse_url, name='isetrustsec'),
+    url(r'api/v0/backup', views.Backup.as_view()),
+    url(r'api/v0/restore', views.Restore.as_view()),
 ]
