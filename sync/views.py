@@ -1,8 +1,13 @@
 from rest_framework import viewsets
-from sync.serializers import UploadZipSerializer, UploadSerializer, DashboardSerializer, ISEServerSerializer,\
+from sync.serializers import UploadZipSerializer, UploadSerializer, DashboardSerializer, ISEServerSerializer, \
     SyncSessionSerializer, TagSerializer, ACLSerializer, PolicySerializer, TaskSerializer
 from sync.models import UploadZip, Upload, Dashboard, ISEServer, SyncSession, Tag, ACL, Policy, Task
 from django.db.models import Q
+from rest_framework.views import APIView
+from scripts.db_backup import backup
+from scripts.db_restore import restore
+from django.http import JsonResponse
+import os
 
 
 class UploadZipViewSet(viewsets.ModelViewSet):
@@ -167,3 +172,23 @@ class TaskViewSet(viewsets.ModelViewSet):
     """
     queryset = Task.objects.all().order_by('last_update')
     serializer_class = TaskSerializer
+
+
+class Backup(APIView):
+    def post(self, request):
+        ret = backup()
+        return JsonResponse({"filename": ret})
+
+
+class Restore(APIView):
+    def post(self, request):
+        fn = request.data.get('filename', None)
+        if not fn:
+            return JsonResponse({"success": False, "error": "You must POST the filename in JSON format. Example: {"
+                                                            "'filename': '20200703-220624.json'}"})
+        try:
+            filepath = os.path.join("config", fn)
+            restore(filepath)
+            return JsonResponse({"success": True})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
