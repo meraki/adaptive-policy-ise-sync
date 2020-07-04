@@ -1,0 +1,46 @@
+{% extends 'home/base.html' %}
+
+{% block content %}
+    <form class="md-panel__form" method="POST" action="/home/backup-restore">
+        {% if msg %}
+            <div class="md-alert-banner md-alert-banner--info">
+            <div class="md-alert-banner__text">{{ msg }}</div>
+{#            <div class="md-alert-banner__close" tabindex="0" role="button" aria-label="Close">#}
+{#                <i class="icon icon-cancel_16"></i>#}
+{#            </div>#}
+            </div>
+            <br>
+        {% endif %}
+        <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Restore From Backup</h4>
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            <th style="width: 24rem">File Name</th>
+                        </tr>
+                    </thead>
+                    <tbody class="md-data-table__tbody">
+                        {% for f in data %}
+                            <tr><td> {{ f }} &nbsp;<button name="action" id="action" value="restore_{{ f }}" class="md-button md-button--blue">Restore</button>&nbsp;<button name="action" id="action" value="delete_{{ f }}" class="md-button md-button--blue">Delete</button></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <br><br>
+        <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Create New Backup</h4>
+        {% csrf_token %}
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            <th style="width: 16rem"><button name="action" id="action" value="backup" class="md-button md-button--blue">Backup Now</button></th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </form>
+{% endblock %}
