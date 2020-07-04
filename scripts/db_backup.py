@@ -17,6 +17,7 @@ def backup():
         # management.call_command('dumpdata', indent=4, exclude=["sync.Task"], stdout=f)
         management.call_command('dumpdata', stdout=f)
     print("Created backup:", file)
+    return file
 
 
 def run():
