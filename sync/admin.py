@@ -12,17 +12,18 @@ class ISEServerAdmin(admin.ModelAdmin):
 
 class TagAdmin(admin.ModelAdmin):
     readonly_fields = ('cleaned_name', 'last_update', 'last_update_data', 'match_report', 'push_delete', 'update_dest',
-                       'sourced_from', 'last_update_state', 'meraki_ver', 'ise_ver', 'needs_update')
+                       'sourced_from', 'last_update_state', 'meraki_ver', 'ise_ver', 'needs_update', 'update_failed')
 
 
 class ACLAdmin(admin.ModelAdmin):
     readonly_fields = ('last_update', 'last_update_data', 'match_report', 'push_delete', 'update_dest',
-                       'visible', 'sourced_from', 'last_update_state', 'meraki_ver', 'ise_ver', 'needs_update')
+                       'visible', 'sourced_from', 'last_update_state', 'meraki_ver', 'ise_ver', 'needs_update',
+                       'update_failed')
 
 
 class PolicyAdmin(admin.ModelAdmin):
     readonly_fields = ('last_update', 'last_update_data', 'match_report', 'push_delete', 'update_dest',
-                       'sourced_from', 'last_update_state', 'meraki_ver', 'ise_ver', 'needs_update')
+                       'sourced_from', 'last_update_state', 'meraki_ver', 'ise_ver', 'needs_update', 'update_failed')
 
 
 class SyncSessionAdmin(admin.ModelAdmin):
