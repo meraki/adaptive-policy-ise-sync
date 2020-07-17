@@ -1,8 +1,8 @@
 from django.contrib import admin
-from sync.models import UploadZip, Upload, Dashboard, ISEServer, SyncSession, Tag, ACL, Policy, Task
+from sync.models import UploadZip, Upload, Dashboard, ISEServer, SyncSession, Tag, ACL, Policy, Task, Organization
 
 
-class DashboardAdmin(admin.ModelAdmin):
+class OrganizationAdmin(admin.ModelAdmin):
     readonly_fields = ('raw_data', 'last_update', 'last_sync')
 
 
@@ -39,7 +39,8 @@ class TaskAdmin(admin.ModelAdmin):
 
 admin.site.register(UploadZip)
 admin.site.register(Upload, UploadAdmin)
-admin.site.register(Dashboard, DashboardAdmin)
+admin.site.register(Dashboard)
+admin.site.register(Organization, OrganizationAdmin)
 admin.site.register(ISEServer, ISEServerAdmin)
 # admin.site.register(ISEMatrix)
 admin.site.register(SyncSession, SyncSessionAdmin)
