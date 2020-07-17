@@ -11,29 +11,40 @@ def clean_sgts(src, sgts, is_base, sync_session, log=None):
     append_log(log, "db_trustsec::clean_sgts::", sgts)
     try:
         changed_objs = []
-        if is_base:
-            active_id_list = []
-            if src == "ise":
-                for s in sgts:
-                    active_id_list.append(s["id"])
-            elif src == "meraki":
-                for s in sgts:
-                    active_id_list.append(s["groupId"])
+        active_id_list = []
+        if src == "ise":
+            for s in sgts:
+                active_id_list.append(s["id"])
+        elif src == "meraki":
+            for s in sgts:
+                active_id_list.append(s["groupId"])
 
-            tags = Tag.objects.filter(syncsession=sync_session)
-            for i in tags:
-                if src == "ise" and i.ise_id and i.ise_id not in active_id_list:
+        tags = Tag.objects.filter(syncsession=sync_session)
+        for i in tags:
+            if src == "ise" and i.ise_id and i.ise_id not in active_id_list:
+                if is_base:
                     append_log(log, "db_trustsec::clean_sgts::setting ise", i.ise_id, "for delete")
                     i.push_delete = True
                     i.last_update = make_aware(datetime.datetime.now())
-                    i.save()
-                    changed_objs.append(i)
-                if src == "meraki" and i.meraki_id and i.meraki_id not in active_id_list:
+                else:
+                    append_log(log, "db_trustsec::clean_sgts::removing ise", i.ise_id, "from db")
+                    i.ise_id = None
+                    i.ise_data = None
+                    i.last_update = make_aware(datetime.datetime.now())
+                i.save()
+                changed_objs.append(i)
+            if src == "meraki" and i.meraki_id and i.meraki_id not in active_id_list:
+                if is_base:
                     append_log(log, "db_trustsec::clean_sgts::setting meraki", i.meraki_id, "for delete")
                     i.push_delete = True
                     i.last_update = make_aware(datetime.datetime.now())
-                    i.save()
-                    changed_objs.append(i)
+                else:
+                    append_log(log, "db_trustsec::clean_sgts::removing meraki", i.meraki_id, "from db")
+                    i.meraki_id = None
+                    i.meraki_data = None
+                    i.last_update = make_aware(datetime.datetime.now())
+                i.save()
+                changed_objs.append(i)
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::clean_sgts::Exception in clean_sgts: ", e)
@@ -43,29 +54,40 @@ def clean_sgacls(src, sgacls, is_base, sync_session, log=None):
     append_log(log, "db_trustsec::clean_sgacls::", sgacls)
     try:
         changed_objs = []
-        if is_base:
-            active_id_list = []
-            if src == "ise":
-                for s in sgacls:
-                    active_id_list.append(s["id"])
-            elif src == "meraki":
-                for s in sgacls:
-                    active_id_list.append(s["aclId"])
+        active_id_list = []
+        if src == "ise":
+            for s in sgacls:
+                active_id_list.append(s["id"])
+        elif src == "meraki":
+            for s in sgacls:
+                active_id_list.append(s["aclId"])
 
-            acls = ACL.objects.filter(syncsession=sync_session)
-            for i in acls:
-                if src == "ise" and i.ise_id and i.ise_id not in active_id_list:
+        acls = ACL.objects.filter(syncsession=sync_session)
+        for i in acls:
+            if src == "ise" and i.ise_id and i.ise_id not in active_id_list:
+                if is_base:
                     append_log(log, "db_trustsec::clean_sgacls::setting ise", i.ise_id, "for delete")
                     i.push_delete = True
                     i.last_update = make_aware(datetime.datetime.now())
-                    i.save()
-                    changed_objs.append(i)
-                if src == "meraki" and i.meraki_id and i.meraki_id not in active_id_list:
+                else:
+                    append_log(log, "db_trustsec::clean_sgacls::removing ise", i.ise_id, "from db")
+                    i.ise_id = None
+                    i.ise_data = None
+                    i.last_update = make_aware(datetime.datetime.now())
+                i.save()
+                changed_objs.append(i)
+            if src == "meraki" and i.meraki_id and i.meraki_id not in active_id_list:
+                if is_base:
                     append_log(log, "db_trustsec::clean_sgacls::setting meraki", i.meraki_id, "for delete")
                     i.push_delete = True
                     i.last_update = make_aware(datetime.datetime.now())
-                    i.save()
-                    changed_objs.append(i)
+                else:
+                    append_log(log, "db_trustsec::clean_sgacls::removing meraki", i.meraki_id, "from db")
+                    i.meraki_id = None
+                    i.meraki_data = None
+                    i.last_update = make_aware(datetime.datetime.now())
+                i.save()
+                changed_objs.append(i)
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::clean_sgacls::Exception in clean_sgacls: ", e)
@@ -75,29 +97,40 @@ def clean_sgpolicies(src, sgpolicies, is_base, sync_session, log=None):
     append_log(log, "db_trustsec::clean_sgpolicies::", sgpolicies)
     try:
         changed_objs = []
-        if is_base:
-            active_id_list = []
-            if src == "ise":
-                for s in sgpolicies:
-                    active_id_list.append(s["id"])
-            elif src == "meraki":
-                for s in sgpolicies:
-                    active_id_list.append("s" + str(s["srcGroupId"]) + "-d" + str(s["dstGroupId"]))
+        active_id_list = []
+        if src == "ise":
+            for s in sgpolicies:
+                active_id_list.append(s["id"])
+        elif src == "meraki":
+            for s in sgpolicies:
+                active_id_list.append("s" + str(s["srcGroupId"]) + "-d" + str(s["dstGroupId"]))
 
-            policies = Policy.objects.filter(syncsession=sync_session)
-            for i in policies:
-                if src == "ise" and i.ise_id and i.ise_id not in active_id_list:
+        policies = Policy.objects.filter(syncsession=sync_session)
+        for i in policies:
+            if src == "ise" and i.ise_id and i.ise_id not in active_id_list:
+                if is_base:
                     append_log(log, "db_trustsec::clean_sgpolicies::setting ise", i.ise_id, "for delete")
                     i.push_delete = True
                     i.last_update = make_aware(datetime.datetime.now())
-                    i.save()
-                    changed_objs.append(i)
-                if src == "meraki" and i.meraki_id and i.meraki_id not in active_id_list:
+                else:
+                    append_log(log, "db_trustsec::clean_sgpolicies::removing ise", i.ise_id, "from db")
+                    i.ise_id = None
+                    i.ise_data = None
+                    i.last_update = make_aware(datetime.datetime.now())
+                i.save()
+                changed_objs.append(i)
+            if src == "meraki" and i.meraki_id and i.meraki_id not in active_id_list:
+                if is_base:
                     append_log(log, "db_trustsec::clean_sgpolicies::setting meraki", i.meraki_id, "for delete")
                     i.push_delete = True
                     i.last_update = make_aware(datetime.datetime.now())
-                    i.save()
-                    changed_objs.append(i)
+                else:
+                    append_log(log, "db_trustsec::clean_sgpolicies::removing meraki", i.meraki_id, "from db")
+                    i.meraki_id = None
+                    i.meraki_data = None
+                    i.last_update = make_aware(datetime.datetime.now())
+                i.save()
+                changed_objs.append(i)
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::clean_sgpolicies::Exception in clean_sgpolicies: ", e)
@@ -347,7 +380,7 @@ def merge_sgpolicies(src, sgpolicies, is_base, sync_session, log=None):
                     t.needs_update = None
                 t.save()
             else:
-                print("db_trustsec::merge_sgpolicies::missing src or dst", src_grp, dst_grp)
+                append_log(log, "db_trustsec::merge_sgpolicies::missing src or dst", s, src_grp, dst_grp)
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::merge_sgpolicies::Exception in merge_sgpolicies: ", e, traceback.format_exc())
