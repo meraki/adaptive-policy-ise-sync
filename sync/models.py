@@ -179,19 +179,34 @@ def auto_delete_upload_on_change(sender, instance, **kwargs):
             os.remove(old_file.path)
 
 
+class Organization(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    orgid = models.CharField("API Organization ID", max_length=32, null=True, blank=True, default=None)
+    raw_data = models.TextField(blank=True, null=True, default=None)
+    force_rebuild = models.BooleanField("Force Dashboard Sync", default=False, editable=True)
+    skip_sync = models.BooleanField(default=False, editable=False)
+    last_update = models.DateTimeField(default=django.utils.timezone.now)
+    last_sync = models.DateTimeField(null=True, default=None, blank=True)
+
+    def __str__(self):
+        return self.orgid
+
+
 class Dashboard(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     description = models.CharField("Dashboard Integration Description", max_length=100, blank=False, null=False)
     baseurl = models.CharField("Base URL", max_length=64, null=False, blank=False,
                                default="https://api.meraki.com/api/v1")
     apikey = models.CharField("API Key", max_length=64, null=False, blank=False)
-    orgid = models.CharField("API Organization ID", max_length=32, null=True, blank=True, default=None)
+    # orgid = models.CharField("API Organization ID", max_length=32, null=True, blank=True, default=None)
     # netid = models.CharField(max_length=32, null=True, blank=True, default=None)
     # username = models.CharField(max_length=64, null=True, blank=True, default=None)
     # password = models.CharField(max_length=64, null=True, blank=True, default=None)
     webhook_enable = models.BooleanField(default=False, editable=True)
     webhook_ngrok = models.BooleanField(default=False, editable=True)
     webhook_url = models.CharField(max_length=200, null=True, blank=True, default=None)
+    organization = models.ManyToManyField(Organization, blank=True)
+    # TODO: Remove these - they belong in Org
     raw_data = models.TextField(blank=True, null=True, default=None)
     force_rebuild = models.BooleanField("Force Dashboard Sync", default=False, editable=True)
     skip_sync = models.BooleanField(default=False, editable=False)
