@@ -1,4 +1,4 @@
-from sync.models import ISEServer, Upload, UploadZip, Dashboard, Tag, ACL, Policy, SyncSession
+from sync.models import ISEServer, Upload, UploadZip, Dashboard, Tag, ACL, Policy, SyncSession, Organization
 from django.shortcuts import redirect, reverse, render
 from django.contrib.auth import logout
 from django.http import JsonResponse
@@ -170,6 +170,13 @@ def setupmeraki(request):
     else:
         dashboard = None
 
+    # TODO: Multi-Org support
+    organizations = Organization.objects.all()
+    if len(organizations) > 0:
+        organization = organizations[0]
+    else:
+        organization = None
+
     iseservers = ISEServer.objects.all()
     if len(iseservers) > 0:
         iseserver = iseservers[0]
@@ -197,7 +204,7 @@ def setupmeraki(request):
                 iseserver.pxgrid_isecert = server_cert[0]
                 iseserver.save()
 
-    return render(request, 'setup/meraki.html', {"active": 5, "data": dashboard})
+    return render(request, 'setup/meraki.html', {"active": 5, "data": dashboard, "org": organization})
 
 
 def setupsync(request):
@@ -225,10 +232,19 @@ def setupsync(request):
         if apikey and orgid:
             if dashboard:
                 dashboard.apikey = apikey
-                dashboard.orgid = orgid
+                # dashboard.orgid = orgid
+                orgs = Organization.objects.all()
+                if len(orgs) == 1:                      # If there is one organization selected, replace it
+                    orgs[0].orgid = orgid
+                    orgs[0].save()
+                else:                                   # Otherwise, if there are 0 or >1 orgs, add it
+                    o = Organization.objects.create(orgid=orgid)
+                    dashboard.organization.add(o)
                 dashboard.save()
             else:
-                Dashboard.objects.create(description="Meraki Dashboard", apikey=apikey, orgid=orgid, baseurl=apiurl)
+                o = Organization.objects.create(orgid=orgid)
+                d = Dashboard.objects.create(description="Meraki Dashboard", apikey=apikey, baseurl=apiurl)
+                d.organization.add(o)
 
     return render(request, 'setup/sync.html', {"active": 6, "data": sync, "default_sync": defsync})
 
@@ -565,8 +581,16 @@ def merakiconfig(request):
     else:
         dashboard = None
 
+    # TODO: add mutli-org support
+    organizations = Organization.objects.all()
+    if len(organizations) > 0:
+        organization = organizations[0]
+    else:
+        organization = None
+
     crumbs = '<li class="current">Configuration</li><li class="current">Meraki Dashboard</li>'
-    return render(request, 'home/merakiconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": dashboard})
+    return render(request, 'home/merakiconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": dashboard,
+                                                      "org": organization})
 
 
 def syncconfig(request):
