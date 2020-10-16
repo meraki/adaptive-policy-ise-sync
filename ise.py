@@ -318,8 +318,9 @@ class ERS(object):
             out_objs = []
             objs = self._get_objects('{0}/config/sgt'.format(self.url_base), filter=filter, size=size, page=page)
             for o in objs["response"]:
-                sgt = self.get_object('{0}/config/sgt'.format(self.url_base), o[1], 'Sgt')
-                out_objs.append(sgt["response"])
+                if len(o) > 1:
+                    sgt = self.get_object('{0}/config/sgt'.format(self.url_base), o[1], 'Sgt')
+                    out_objs.append(sgt["response"])
             return {"success": objs["success"], "response": out_objs, "error": objs["error"]}
         else:
             return self._get_objects('{0}/config/sgt'.format(self.url_base), filter=filter, size=size, page=page)
@@ -507,8 +508,9 @@ class ERS(object):
             out_objs = []
             objs = self._get_objects('{0}/config/sgacl'.format(self.url_base), filter=filter, size=size, page=page)
             for o in objs["response"]:
-                sgacl = self.get_object('{0}/config/sgacl'.format(self.url_base), o[1], 'Sgacl')
-                out_objs.append(sgacl["response"])
+                if len(o) > 1:
+                    sgacl = self.get_object('{0}/config/sgacl'.format(self.url_base), o[1], 'Sgacl')
+                    out_objs.append(sgacl["response"])
             return {"success": objs["success"], "response": out_objs, "error": objs["error"]}
         else:
             return self._get_objects('{0}/config/sgacl'.format(self.url_base), filter=filter, size=size, page=page)
@@ -694,8 +696,9 @@ class ERS(object):
             objs = self._get_objects('{0}/config/egressmatrixcell'.format(self.url_base), filter=filter, size=size,
                                      page=page)
             for o in objs["response"]:
-                emc = self.get_object('{0}/config/egressmatrixcell'.format(self.url_base), o[1], 'EgressMatrixCell')
-                out_objs.append(emc["response"])
+                if len(o) > 1:
+                    emc = self.get_object('{0}/config/egressmatrixcell'.format(self.url_base), o[1], 'EgressMatrixCell')
+                    out_objs.append(emc["response"])
             return {"success": objs["success"], "response": out_objs, "error": objs["error"]}
         else:
             return self._get_objects('{0}/config/egressmatrixcell'.format(self.url_base), filter=filter, size=size,
