@@ -1,9 +1,3 @@
-# import atexit
-# from apscheduler.schedulers.background import BackgroundScheduler
-# from apscheduler.schedulers.background import BackgroundScheduler
-# from django_apscheduler.jobstores import DjangoJobStore
-# from django_apscheduler.jobstores import register_events
-
 from sync.models import SyncSession, TagData, ACLData, PolicyData
 from django.db.models import F, Q
 from django.utils.timezone import make_aware
@@ -13,9 +7,6 @@ from scripts.db_trustsec import clean_sgts, clean_sgacls, clean_sgpolicies, merg
 from scripts.dblog import append_log, db_log
 from ise import ERS
 import traceback
-
-# scheduler = BackgroundScheduler()
-# scheduler.add_jobstore(DjangoJobStore(), "default")
 
 
 def ingest_ise_data(accounts, log):
@@ -79,8 +70,6 @@ def digest_database_data(sa, log):
 
     append_log(log, "ise_monitor::digest_database_data::Tag check")
     from django.forms.models import model_to_dict
-    # for sgt in TagData.objects.exclude(iseserver=None):
-    #     append_log(log, "ise_monitor::digest_database_data::Tag", sgt.tag.name, sgt.tag.do_sync, model_to_dict(sgt))
     tags = TagData.objects.filter(Q(tag__do_sync=True) & Q(update_failed=False)).exclude(iseserver=None)
     for o in tags:
         append_log(log, "ise_monitor::digest_database_data::Tag", o.tag.name, o.tag.do_sync, o.tag.in_sync(), o.update_dest(), model_to_dict(o))
@@ -273,7 +262,7 @@ def digest_database_data(sa, log):
                         acls.append(s.source_id)
 
                 if not srcsgt or not dstsgt or sgacl is None:
-                    o.update_failed = False     # was True; disabled for now
+                    o.update_failed = True
                     o.last_update = make_aware(datetime.datetime.now())
                     o.last_update_state = "False"
                     o.last_update_data = {"policy": str(o), "error": "ISE Create: Unable to locate sgt/sgacl data;" +
@@ -378,13 +367,3 @@ def sync_ise():
 def run():     # pragma: no cover
     print("sync_ise::run")
     sync_ise()
-
-
-# @scheduler.scheduled_job("interval", seconds=10, id="ise_monitor")
-# def job():     # pragma: no cover
-#     sync_ise()
-#
-#
-# if 'test' not in sys.argv and 'test' not in sys.argv[0]:     # pragma: no cover
-#     register_events(scheduler)
-#     scheduler.start()
