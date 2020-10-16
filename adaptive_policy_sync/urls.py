@@ -25,12 +25,13 @@ from . import views as apsyncviews
 from scripts.dashboard_webhook_handler import process_webhook
 from scripts.dashboard_simulator import parse_url as meraki_parse_url
 from scripts.ise_ers_simulator import parse_url as ise_parse_url
-import adaptive_policy_sync.tasks   # noqa: F401
+# import adaptive_policy_sync.tasks   # noqa: F401
 
 
 router = routers.DefaultRouter()
 router.register(r'uploadzip', views.UploadZipViewSet)
 router.register(r'upload', views.UploadViewSet)
+router.register(r'organization', views.OrganizationViewSet)
 router.register(r'dashboard', views.DashboardViewSet)
 router.register(r'iseserver', views.ISEServerViewSet)
 # router.register(r'isematrix', views.ISEMatrixViewSet)
