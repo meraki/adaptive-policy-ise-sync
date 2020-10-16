@@ -44,6 +44,9 @@ class DashboardSerializer(serializers.ModelSerializer):
         super(DashboardSerializer, self).__init__(*args, **kwargs)
         if "context" in kwargs:
             request = kwargs['context']['request']
+            self.fields['organization_detail'] = OrganizationSerializer(source='organization', many=True,
+                                                                        read_only=True,
+                                                                        context={"request": request})
             include_detail = request.GET.get('detail', "false")
             if include_detail.lower() == "false":
                 self.fields.pop("organization_detail")
