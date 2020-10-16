@@ -21,10 +21,10 @@
         </h1>
         <img id="keyboard_icon" src="keybd_closed.png" alt="Show keyboard shortcuts" />
         <h2 class="stats">
-            25 statements &nbsp;
-            <span class="run shortkey_r button_toggle_run">25 run</span>
-            <span class="mis show_mis shortkey_m button_toggle_mis">0 missing</span>
-            <span class="exc show_exc shortkey_x button_toggle_exc">0 excluded</span>
+            24 statements &nbsp;
+            <button type="button" class="run shortkey_r button_toggle_run" title="Toggle lines run">24 run</button>
+            <button type="button" class="mis show_mis shortkey_m button_toggle_mis" title="Toggle lines missing">0 missing</button>
+            <button type="button" class="exc show_exc shortkey_x button_toggle_exc" title="Toggle lines excluded">0 excluded</button>
         </h2>
     </div>
 </div>
@@ -78,7 +78,7 @@
     <p id="t25" class="run"><span class="n"><a href="#t25">25</a></span><span class="t"><span class="key">from</span> <span class="nam">scripts</span><span class="op">.</span><span class="nam">dashboard_webhook_handler</span> <span class="key">import</span> <span class="nam">process_webhook</span>&nbsp;</span><span class="r"></span></p>
     <p id="t26" class="run"><span class="n"><a href="#t26">26</a></span><span class="t"><span class="key">from</span> <span class="nam">scripts</span><span class="op">.</span><span class="nam">dashboard_simulator</span> <span class="key">import</span> <span class="nam">parse_url</span> <span class="key">as</span> <span class="nam">meraki_parse_url</span>&nbsp;</span><span class="r"></span></p>
     <p id="t27" class="run"><span class="n"><a href="#t27">27</a></span><span class="t"><span class="key">from</span> <span class="nam">scripts</span><span class="op">.</span><span class="nam">ise_ers_simulator</span> <span class="key">import</span> <span class="nam">parse_url</span> <span class="key">as</span> <span class="nam">ise_parse_url</span>&nbsp;</span><span class="r"></span></p>
-    <p id="t28" class="run"><span class="n"><a href="#t28">28</a></span><span class="t"><span class="key">import</span> <span class="nam">adaptive_policy_sync</span><span class="op">.</span><span class="nam">tasks</span>   <span class="com"># noqa: F401</span>&nbsp;</span><span class="r"></span></p>
+    <p id="t28" class="pln"><span class="n"><a href="#t28">28</a></span><span class="t"><span class="com"># import adaptive_policy_sync.tasks   # noqa: F401</span>&nbsp;</span><span class="r"></span></p>
     <p id="t29" class="pln"><span class="n"><a href="#t29">29</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p id="t30" class="pln"><span class="n"><a href="#t30">30</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p id="t31" class="run"><span class="n"><a href="#t31">31</a></span><span class="t"><span class="nam">router</span> <span class="op">=</span> <span class="nam">routers</span><span class="op">.</span><span class="nam">DefaultRouter</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -126,15 +126,18 @@
     <p id="t73" class="pln"><span class="n"><a href="#t73">73</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^home/config-ise$'</span><span class="op">,</span> <span class="nam">apsyncviews</span><span class="op">.</span><span class="nam">iseconfig</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'iseconfig'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p id="t74" class="pln"><span class="n"><a href="#t74">74</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^home/config-meraki$'</span><span class="op">,</span> <span class="nam">apsyncviews</span><span class="op">.</span><span class="nam">merakiconfig</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'merakiconfig'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p id="t75" class="pln"><span class="n"><a href="#t75">75</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^home/config-sync$'</span><span class="op">,</span> <span class="nam">apsyncviews</span><span class="op">.</span><span class="nam">syncconfig</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'syncconfig'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p id="t76" class="pln"><span class="n"><a href="#t76">76</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^meraki/api/v1/organizations'</span><span class="op">,</span> <span class="nam">meraki_parse_url</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'dashboardorgs'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p id="t77" class="pln"><span class="n"><a href="#t77">77</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^ise/ers/config/'</span><span class="op">,</span> <span class="nam">ise_parse_url</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'isetrustsec'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
-    <p id="t78" class="pln"><span class="n"><a href="#t78">78</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
+    <p id="t76" class="pln"><span class="n"><a href="#t76">76</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^home/backup-restore$'</span><span class="op">,</span> <span class="nam">apsyncviews</span><span class="op">.</span><span class="nam">backuprestore</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'backuprestore'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p id="t77" class="pln"><span class="n"><a href="#t77">77</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^meraki/api/v1/organizations'</span><span class="op">,</span> <span class="nam">meraki_parse_url</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'dashboardorgs'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p id="t78" class="pln"><span class="n"><a href="#t78">78</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'^ise/ers/config/'</span><span class="op">,</span> <span class="nam">ise_parse_url</span><span class="op">,</span> <span class="nam">name</span><span class="op">=</span><span class="str">'isetrustsec'</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p id="t79" class="pln"><span class="n"><a href="#t79">79</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'api/v0/backup'</span><span class="op">,</span> <span class="nam">views</span><span class="op">.</span><span class="nam">Backup</span><span class="op">.</span><span class="nam">as_view</span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p id="t80" class="pln"><span class="n"><a href="#t80">80</a></span><span class="t">    <span class="nam">url</span><span class="op">(</span><span class="str">r'api/v0/restore'</span><span class="op">,</span> <span class="nam">views</span><span class="op">.</span><span class="nam">Restore</span><span class="op">.</span><span class="nam">as_view</span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p id="t81" class="pln"><span class="n"><a href="#t81">81</a></span><span class="t"><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
 </div>
 <div id="footer">
     <div class="content">
         <p>
-            <a class="nav" href="index.html">&#xab; index</a> &nbsp; &nbsp; <a class="nav" href="https://coverage.readthedocs.io">coverage.py v5.1</a>,
-            created at 2020-07-03 14:30
+            <a class="nav" href="index.html">&#xab; index</a> &nbsp; &nbsp; <a class="nav" href="https://coverage.readthedocs.io">coverage.py v5.3</a>,
+            created at 2020-10-16 15:30 -0500
         </p>
     </div>
 </div>
