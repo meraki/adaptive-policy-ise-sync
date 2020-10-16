@@ -32,14 +32,14 @@
                             {% endif %}
                             {% if not d.do_sync %}
                                 <td>Unused</td>
-                            {% elif d.in_sync %}
-                                <td style="background-color:#55dd55"> {{ d.in_sync }} </td>
-                            {% elif d.ise_id and d.meraki_id %}
-                                <td style="background-color:#dd5555"> {{ d.in_sync }} </td>
-                            {% elif d.ise_id %}
+                            {% elif d.objects_in_sync %}
+                                <td style="background-color:#55dd55"> {{ d.objects_in_sync }} </td>
+                            {% elif d.object_update_target == "meraki" %}
                                 <td style="background-color:#dd5555"> Meraki Missing </td>
-                            {% else %}
+                            {% elif d.object_update_target == "ise" %}
                                 <td style="background-color:#dd5555"> ISE Missing </td>
+                            {% else %}
+                                <td style="background-color:#dd5555"> Unknown </td>
                             {% endif %}
                             <td> {{ d.last_update }} </td><td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.id }} </a></td><td><a href="/home/status-sgacl" onclick="doDelete('sgacl', '{{ d.id }}')"><span class="icon icon-delete_24"></span></a></td></tr>
                     {% endfor %}
