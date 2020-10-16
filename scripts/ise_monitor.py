@@ -1,48 +1,47 @@
 # import atexit
 # from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers.background import BackgroundScheduler
-from django_apscheduler.jobstores import DjangoJobStore
-from django_apscheduler.jobstores import register_events
+# from apscheduler.schedulers.background import BackgroundScheduler
+# from django_apscheduler.jobstores import DjangoJobStore
+# from django_apscheduler.jobstores import register_events
 
-from sync.models import SyncSession, Tag, ACL, Policy
+from sync.models import SyncSession, TagData, ACLData, PolicyData
 from django.db.models import F, Q
 from django.utils.timezone import make_aware
 import json
 import datetime
-import sys
 from scripts.db_trustsec import clean_sgts, clean_sgacls, clean_sgpolicies, merge_sgts, merge_sgacls, merge_sgpolicies
 from scripts.dblog import append_log, db_log
 from ise import ERS
 import traceback
 
-scheduler = BackgroundScheduler()
-scheduler.add_jobstore(DjangoJobStore(), "default")
+# scheduler = BackgroundScheduler()
+# scheduler.add_jobstore(DjangoJobStore(), "default")
 
 
 def ingest_ise_data(accounts, log):
-    append_log(log, "ise_monitor::ingest_dashboard_data::Accounts -", accounts)
+    append_log(log, "ise_monitor::ingest_server_data::Accounts -", accounts)
     dt = make_aware(datetime.datetime.now())
 
     for sa in accounts:
         ise = None
         a = sa.iseserver
-        append_log(log, "ise_monitor::ingest_dashboard_data::Resync -", a.description)
+        append_log(log, "ise_monitor::ingest_server_data::Resync -", a.description)
         ise = ERS(ise_node=a.ipaddress, ers_user=a.username, ers_pass=a.password, verify=False, disable_warnings=True)
         sgts = ise.get_sgts(detail=True)
         sgacls = ise.get_sgacls(detail=True)
         sgpolicies = ise.get_egressmatrixcells(detail=True)
-        append_log(log, "ise_monitor::ingest_dashboard_data::SGTs - ", sgts)
-        append_log(log, "ise_monitor::ingest_dashboard_data::SGACLs - ", sgacls)
-        append_log(log, "ise_monitor::ingest_dashboard_data::Policies - ", sgpolicies)
+        append_log(log, "ise_monitor::ingest_server_data::SGTs - ", len(sgts))
+        append_log(log, "ise_monitor::ingest_server_data::SGACLs - ", len(sgacls))
+        append_log(log, "ise_monitor::ingest_server_data::Policies - ", len(sgpolicies))
         ise = {"sgts": sgts, "sgacls": sgacls, "sgpolicies": sgpolicies}
 
-        merge_sgts("ise", sgts["response"], sa.ise_source, sa, log)
-        merge_sgacls("ise", sgacls["response"], sa.ise_source, sa, log)
-        merge_sgpolicies("ise", sgpolicies["response"], sa.ise_source, sa, log)
+        merge_sgts("ise", sgts["response"], sa.ise_source, sa, log, a)
+        merge_sgacls("ise", sgacls["response"], sa.ise_source, sa, log, a)
+        merge_sgpolicies("ise", sgpolicies["response"], sa.ise_source, sa, log, a)
 
-        clean_sgts("ise", sgts["response"], sa.ise_source, sa, log)
-        clean_sgacls("ise", sgacls["response"], sa.ise_source, sa, log)
-        clean_sgpolicies("ise", sgpolicies["response"], sa.ise_source, sa, log)
+        clean_sgts("ise", sgts["response"], sa.ise_source, sa, log, a)
+        clean_sgacls("ise", sgacls["response"], sa.ise_source, sa, log, a)
+        clean_sgpolicies("ise", sgpolicies["response"], sa.ise_source, sa, log, a)
 
         a.raw_data = json.dumps(ise)
         a.force_rebuild = False
@@ -61,174 +60,265 @@ def digest_database_data(sa, log):
         append_log(log, "ise_monitor::digest_database_data::sync session not set to apply changes")
         return
 
-    policies = Policy.objects.filter(Q(needs_update="ise") & Q(do_sync=True) & Q(update_failed=False))
+    policies = PolicyData.objects.filter(Q(policy__do_sync=True) & Q(update_failed=False)).exclude(iseserver=None)
     for o in policies:
-        if o.ise_id:
-            if o.push_delete:
+        if o.source_id and o.update_dest() == "ise":
+            if o.policy.push_delete:
                 try:
-                    ret = ise.delete_egressmatrixcell(o.ise_id)
+                    ret = ise.delete_egressmatrixcell(o.source_id)
                     append_log(log, "ise_monitor::digest_database_data::Policy delete", ret)
                     o.delete()
                 except Exception as e:  # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::Policy Delete Exception", e,
                                traceback.format_exc())
                     o.update_failed = True
+                    o.last_update = make_aware(datetime.datetime.now())
+                    o.last_update_state = "False"
+                    o.last_update_data = {"tag": str(o), "error": "Exception: " + str(e)}
                     o.save()
 
-    tags = Tag.objects.filter(Q(needs_update="ise") & Q(do_sync=True) & Q(update_failed=False))
+    append_log(log, "ise_monitor::digest_database_data::Tag check")
+    from django.forms.models import model_to_dict
+    # for sgt in TagData.objects.exclude(iseserver=None):
+    #     append_log(log, "ise_monitor::digest_database_data::Tag", sgt.tag.name, sgt.tag.do_sync, model_to_dict(sgt))
+    tags = TagData.objects.filter(Q(tag__do_sync=True) & Q(update_failed=False)).exclude(iseserver=None)
     for o in tags:
-        if o.ise_id:
-            if o.push_delete:
+        append_log(log, "ise_monitor::digest_database_data::Tag", o.tag.name, o.tag.do_sync, o.tag.in_sync(), o.update_dest(), model_to_dict(o))
+        if o.source_id and o.update_dest() == "ise":
+            if o.tag.push_delete:
                 try:
-                    ret = ise.delete_sgt(o.ise_id)
+                    ret = ise.delete_sgt(o.source_id)
                     append_log(log, "ise_monitor::digest_database_data::SGT delete", ret)
                     o.delete()
                 except Exception as e:  # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::SGT Delete Exception", e,
                                traceback.format_exc())
                     o.update_failed = True
+                    o.last_update = make_aware(datetime.datetime.now())
+                    o.last_update_state = "False"
+                    o.last_update_data = {"tag": str(o), "error": "Exception: " + str(e)}
                     o.save()
             else:
                 try:
-                    ret = ise.update_sgt(o.ise_id, o.cleaned_name(), o.description, o.tag_number, return_object=True)
+                    ret = ise.update_sgt(o.source_id, o.tag.cleaned_name(), o.tag.description, o.tag.tag_number,
+                                         return_object=True)
+                    o.last_update = make_aware(datetime.datetime.now())
                     o.last_update_data = ret
                     o.last_update_state = str(ret.get("success", False))
-                    o.save()
-                    if ret["response"]:
-                        merge_sgts("ise", [ret["response"]], sa.ise_source, sa, log)
-                        append_log(log, "ise_monitor::digest_database_data::Push SGT update", o.ise_id,
-                                   o.cleaned_name(), o.description, o.tag_number, ret)
-                    else:     # pragma: no cover
-                        append_log(log, "ise_monitor::digest_database_data::SGT Null Return", ret)
+                    if ret["response"] and isinstance(ret["response"], dict):
+                        o.source_id = ret["response"]["id"]
+                        o.source_data = json.dumps(ret["response"])
+                        append_log(log, "ise_monitor::digest_database_data::Push SGT update", o.source_id,
+                                   o.tag.cleaned_name(), o.tag.description, o.tag.tag_number, ret)
+                    else:
+                        append_log(log, "ise_monitor::digest_database_data::SGT Invalid Return", ret)
                         o.update_failed = True
-                        o.save()
+                        o.last_update_state = "False"
+                        o.last_update_data = {"tag": str(o), "error": "SGT Invalid return"}
+                    o.save()
                 except Exception as e:     # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::SGT Update Exception", e,
                                traceback.format_exc())
                     o.update_failed = True
+                    o.last_update = make_aware(datetime.datetime.now())
+                    o.last_update_state = "False"
+                    o.last_update_data = {"tag": str(o), "error": "Exception: " + str(e)}
                     o.save()
-        else:
+        elif o.update_dest() == "ise":
             try:
-                ret = ise.add_sgt(o.cleaned_name(), o.description, o.tag_number, return_object=True)
+                ret = ise.add_sgt(o.tag.cleaned_name(), o.tag.description, o.tag.tag_number, return_object=True)
+                o.last_update = make_aware(datetime.datetime.now())
                 o.last_update_data = ret
                 o.last_update_state = str(ret.get("success", False))
-                o.save()
-                if ret["response"]:
-                    merge_sgts("ise", [ret["response"]], sa.ise_source, sa, log)
-                    append_log(log, "ise_monitor::digest_database_data::Push SGT create", o.cleaned_name(),
-                               o.description, o.tag_number, ret)
+                if ret["response"] and isinstance(ret["response"], dict):
+                    o.source_id = ret["response"]["id"]
+                    o.source_data = json.dumps(ret["response"])
+                    append_log(log, "ise_monitor::digest_database_data::Push SGT create", o.tag.cleaned_name(),
+                               o.tag.description, o.tag.tag_number, ret)
                 else:     # pragma: no cover
-                    append_log(log, "ise_monitor::digest_database_data::SGT Null Return", ret)
+                    append_log(log, "ise_monitor::digest_database_data::SGT Invalid Return", ret)
                     o.update_failed = True
-                    o.save()
+                    o.last_update_state = "False"
+                    o.last_update_data = {"tag": str(o), "error": "SGT Invalid Return"}
+                o.save()
             except Exception as e:     # pragma: no cover
                 append_log(log, "ise_monitor::digest_database_data::SGT Create Exception", e, traceback.format_exc())
                 o.update_failed = True
+                o.last_update = make_aware(datetime.datetime.now())
+                o.last_update_state = "False"
+                o.last_update_data = {"tag": str(o), "error": "Exception: " + str(e)}
                 o.save()
 
-    acls = ACL.objects.filter(Q(needs_update="ise") & Q(do_sync=True) & Q(update_failed=False))
+    acls = ACLData.objects.filter(Q(acl__do_sync=True) & Q(update_failed=False)).exclude(iseserver=None)
     for o in acls:
-        if o.ise_id:
-            if o.push_delete:
+        if o.source_id and o.update_dest() == "ise":
+            if o.acl.push_delete:
                 try:
-                    ret = ise.delete_sgacl(o.ise_id)
+                    ret = ise.delete_sgacl(o.source_id)
                     append_log(log, "ise_monitor::digest_database_data::SGACL delete", ret)
                     o.delete()
                 except Exception as e:  # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::SGACL Delete Exception", e,
                                traceback.format_exc())
                     o.update_failed = True
+                    o.last_update = make_aware(datetime.datetime.now())
+                    o.last_update_state = "False"
+                    o.last_update_data = {"acl": str(o), "error": "Exception: " + str(e)}
                     o.save()
             else:
                 try:
-                    ret = ise.update_sgacl(o.ise_id, o.cleaned_name(), o.description, o.get_version("ise"),
-                                           o.get_rules("ise").split("\n"), return_object=True)
+                    ret = ise.update_sgacl(o.source_id, o.acl.cleaned_name(), o.acl.description, o.lookup_version(o),
+                                           o.lookup_rules(o).split("\n"), return_object=True)
+                    o.last_update = make_aware(datetime.datetime.now())
                     o.last_update_data = ret
                     o.last_update_state = str(ret.get("success", False))
-                    o.save()
-                    if ret["response"]:
-                        merge_sgacls("ise", [ret["response"]], sa.ise_source, sa, log)
-                        append_log(log, "ise_monitor::digest_database_data::Push SGACL update", o.ise_id,
-                                   o.cleaned_name(), o.description, ret)
+                    if ret["response"] and isinstance(ret["response"], dict):
+                        o.source_id = ret["response"]["id"]
+                        o.source_data = json.dumps(ret["response"])
+                        append_log(log, "ise_monitor::digest_database_data::Push SGACL update", o.source_id,
+                                   o.acl.cleaned_name(), o.acl.description, ret)
                     else:     # pragma: no cover
-                        append_log(log, "ise_monitor::digest_database_data::SGACL Null Return", ret)
+                        append_log(log, "ise_monitor::digest_database_data::SGACL Invalid Return", ret)
                         o.update_failed = True
-                        o.save()
+                        o.last_update_state = "False"
+                        o.last_update_data = {"acl": str(o), "error": "SGACL Invalid Return"}
+                    o.save()
                 except Exception as e:     # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::SGACL Update Exception", e,
                                traceback.format_exc())
                     o.update_failed = True
+                    o.last_update = make_aware(datetime.datetime.now())
+                    o.last_update_state = "False"
+                    o.last_update_data = {"acl": str(o), "error": "Exception: " + str(e)}
                     o.save()
-        else:
+        elif o.update_dest() == "ise":
             try:
-                ret = ise.add_sgacl(o.cleaned_name(), o.description, o.get_version("ise"),
-                                    o.get_rules("ise").split("\n"), return_object=True)
+                ret = ise.add_sgacl(o.acl.cleaned_name(), o.acl.description, o.lookup_version(o),
+                                    o.lookup_rules(o).split("\n"), return_object=True)
+                o.last_update = make_aware(datetime.datetime.now())
                 o.last_update_data = ret
                 o.last_update_state = str(ret.get("success", False))
-                o.save()
-                if ret["response"]:
-                    merge_sgacls("ise", [ret["response"]], sa.ise_source, sa, log)
-                    append_log(log, "ise_monitor::digest_database_data::Push SGACL create", o.cleaned_name(),
-                               o.description, ret)
+                if ret["response"] and isinstance(ret["response"], dict):
+                    o.source_id = ret["response"]["id"]
+                    o.source_data = json.dumps(ret["response"])
+                    append_log(log, "ise_monitor::digest_database_data::Push SGACL create", o.acl.cleaned_name(),
+                               o.acl.description, ret)
                 else:     # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::SGACL Null Return", ret)
                     o.update_failed = True
-                    o.save()
+                    o.last_update_state = "False"
+                    o.last_update_data = {"acl": str(o), "error": "SGACL Null Return"}
+                o.save()
             except Exception as e:     # pragma: no cover
                 append_log(log, "ise_monitor::digest_database_data::SGACL Create Exception", e, traceback.format_exc())
                 o.update_failed = True
+                o.last_update = make_aware(datetime.datetime.now())
+                o.last_update_state = "False"
+                o.last_update_data = {"acl": str(o), "error": "Exception: " + str(e)}
                 o.save()
 
-    policies = Policy.objects.filter(Q(needs_update="ise") & Q(do_sync=True) & Q(update_failed=False))
+    policies = PolicyData.objects.filter(Q(policy__do_sync=True) & Q(update_failed=False)).exclude(iseserver=None)
     for o in policies:
-        if o.ise_id and not o.push_delete:
+        if o.source_id and not o.policy.push_delete and o.update_dest() == "ise":
             try:
-                srcsgt, dstsgt = o.lookup_ise_sgts()
-                ret = ise.update_egressmatrixcell(o.ise_id, srcsgt.ise_id, dstsgt.ise_id, o.get_catchall("ise"),
-                                                  acls=o.get_sgacls("ise"), description=o.description,
+                srcsgt, dstsgt = o.lookup_sgt_data(o)
+                sgacl = o.lookup_sgacl_data(o)
+                acls = []
+                if sgacl:
+                    for s in sgacl:
+                        acls.append(s.source_id)
+
+                if not srcsgt or not dstsgt or sgacl is None:
+                    o.update_failed = False     # was True; disabled for now
+                    o.last_update = make_aware(datetime.datetime.now())
+                    o.last_update_state = "False"
+                    o.last_update_data = {"policy": str(o), "error": "ISE Update: Unable to locate sgt/sgacl data;" +
+                                                                     str(srcsgt) + ";" + str(dstsgt) + ";" + str(sgacl)}
+                    o.save()
+                    continue
+
+                ret = ise.update_egressmatrixcell(o.source_id, srcsgt.source_id, dstsgt.source_id,
+                                                  o.lookup_acl_catchall(o),
+                                                  acls=acls, description=o.policy.description,
                                                   return_object=True)
+                o.last_update = make_aware(datetime.datetime.now())
                 o.last_update_data = ret
                 o.last_update_state = str(ret.get("success", False))
-                o.save()
-                if ret["response"]:
-                    merge_sgpolicies("ise", [ret["response"]], sa.ise_source, sa, log)
-                    append_log(log, "ise_monitor::digest_database_data::Push Policy update", o.ise_id, o.name,
-                               o.description, ret)
+                if ret["response"] and isinstance(ret["response"], dict):
+                    o.source_id = ret["response"]["id"]
+                    o.source_data = json.dumps(ret["response"])
+                    append_log(log, "ise_monitor::digest_database_data::Push Policy update", o.source_id, o.policy.name,
+                               o.policy.description, ret)
                 else:     # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::Policy Null Return", ret)
                     o.update_failed = True
-                    o.save()
+                    o.last_update_state = "False"
+                    o.last_update_data = {"policy": str(o), "error": "Policy Null Return"}
+                o.save()
             except Exception as e:     # pragma: no cover
                 append_log(log, "ise_monitor::digest_database_data::Policy Update Exception", e,
                            traceback.format_exc())
                 o.update_failed = True
+                o.last_update = make_aware(datetime.datetime.now())
+                o.last_update_state = "False"
+                o.last_update_data = {"policy": str(o), "error": "Exception: " + str(e)}
                 o.save()
-        else:
+        elif o.update_dest() == "ise":
             try:
-                srcsgt, dstsgt = o.lookup_meraki_sgts()
-                ret = ise.add_egressmatrixcell(srcsgt.ise_id, dstsgt.ise_id, o.get_catchall("ise"),
-                                               acls=o.get_sgacls("ise"), description=o.description, return_object=True)
+                srcsgt, dstsgt = o.lookup_sgt_data(o)
+                sgacl = o.lookup_sgacl_data(o)
+                acls = []
+                if sgacl:
+                    for s in sgacl:
+                        acls.append(s.source_id)
+
+                if not srcsgt or not dstsgt or sgacl is None:
+                    o.update_failed = False     # was True; disabled for now
+                    o.last_update = make_aware(datetime.datetime.now())
+                    o.last_update_state = "False"
+                    o.last_update_data = {"policy": str(o), "error": "ISE Create: Unable to locate sgt/sgacl data;" +
+                                                                     str(srcsgt) + ";" + str(dstsgt) + ";" + str(sgacl)}
+                    o.save()
+                    continue
+
+                ret = ise.add_egressmatrixcell(srcsgt.source_id, dstsgt.source_id, o.lookup_acl_catchall(o),
+                                               acls=acls, description=o.policy.description,
+                                               return_object=True)
+                o.last_update = make_aware(datetime.datetime.now())
                 o.last_update_data = ret
                 o.last_update_state = str(ret.get("success", False))
-                o.save()
-                if ret["response"]:
-                    merge_sgpolicies("ise", [ret["response"]], sa.ise_source, sa, log)
-                    append_log(log, "ise_monitor::digest_database_data::Push Policy create", o.name,
-                               o.description, ret)
+                if ret["response"] and isinstance(ret["response"], dict):
+                    o.source_id = ret["response"]["id"]
+                    o.source_data = json.dumps(ret["response"])
+                    append_log(log, "ise_monitor::digest_database_data::Push Policy create", o.policy.name,
+                               o.policy.description, ret)
                 else:     # pragma: no cover
                     append_log(log, "ise_monitor::digest_database_data::Policy Null Return", ret)
                     o.update_failed = True
-                    o.save()
+                    o.last_update_state = "False"
+                    o.last_update_data = {"policy": str(o), "error": "Policy Null Return"}
+                o.save()
             except Exception as e:     # pragma: no cover
                 append_log(log, "ise_monitor::digest_database_data::Policy Create Exception", e, traceback.format_exc())
                 o.update_failed = True
+                o.last_update = make_aware(datetime.datetime.now())
+                o.last_update_state = "False"
+                o.last_update_data = {"policy": str(o), "error": "Exception: " + str(e)}
                 o.save()
 
 
 def sync_ise():
     log = []
-    msg = ""
+    msg = "SYNC_ISE-NO_ACTION_REQUIRED"
     append_log(log, "ise_monitor::sync_ise::Checking ISE Accounts for re-sync...")
+
+    # If we know that something needs to be created, do that first.
+    sss = SyncSession.objects.all()
+    for ss in sss:
+        digest_database_data(ss, log)
+        ss.iseserver.force_rebuild = True
+        ss.save()
+        msg = "SYNC_ISE-CHANGES_MADE_FORCE_UPDATE"
 
     # Ensure that Meraki Dashboard has already completed a sync if it is the source of truth
     stat = SyncSession.objects.filter(Q(ise_source=True) |
@@ -275,9 +365,10 @@ def sync_ise():
 
                 ingest_ise_data(dbs, log)
 
-    ss = SyncSession.objects.all()
-    if len(ss) > 0:
-        digest_database_data(ss[0], log)
+    # After ingesting data, more updates may be required (Should these have been caught elsewhere?)
+    sss = SyncSession.objects.all()
+    for ss in sss:
+        digest_database_data(ss, log)
 
     append_log(log, "ise_monitor::sync_ise::Done")
     db_log("ise_monitor", log)
@@ -285,14 +376,15 @@ def sync_ise():
 
 
 def run():     # pragma: no cover
+    print("sync_ise::run")
     sync_ise()
 
 
-@scheduler.scheduled_job("interval", seconds=10, id="ise_monitor")
-def job():     # pragma: no cover
-    sync_ise()
-
-
-if 'test' not in sys.argv and 'test' not in sys.argv[0]:     # pragma: no cover
-    register_events(scheduler)
-    scheduler.start()
+# @scheduler.scheduled_job("interval", seconds=10, id="ise_monitor")
+# def job():     # pragma: no cover
+#     sync_ise()
+#
+#
+# if 'test' not in sys.argv and 'test' not in sys.argv[0]:     # pragma: no cover
+#     register_events(scheduler)
+#     scheduler.start()
