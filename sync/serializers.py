@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from sync.models import UploadZip, Upload, Dashboard, ISEServer, SyncSession, Tag, ACL, Policy, Task
+from sync.models import UploadZip, Upload, Dashboard, ISEServer, SyncSession, Tag, ACL, Policy, Task, Organization
 
 
 class UploadZipSerializer(serializers.ModelSerializer):
@@ -14,11 +14,29 @@ class UploadSerializer(serializers.ModelSerializer):
         fields = ('id', 'url', 'description', 'file', 'filename', 'systemcert', 'uploaded_at')
 
 
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        fields = ('id', 'url', 'orgid', 'raw_data', 'force_rebuild', 'skip_sync',
+                  'last_update', 'last_sync')
+        read_only_fields = ('id', 'url', 'raw_data', 'last_update', 'last_sync')
+
+    def __init__(self, *args, **kwargs):
+        super(OrganizationSerializer, self).__init__(*args, **kwargs)
+        if "context" in kwargs:
+            request = kwargs['context']['request']
+            include_detail = request.GET.get('detail', "false")
+            if include_detail.lower() == "false":
+                self.fields.pop("raw_data")
+
+
 class DashboardSerializer(serializers.ModelSerializer):
+    organization_detail = OrganizationSerializer(source='organization', many=True, read_only=True)
+
     class Meta:
         model = Dashboard
-        fields = ('id', 'url', 'description', 'baseurl', 'apikey', 'orgid', 'raw_data', 'force_rebuild', 'skip_sync',
-                  'last_update', 'last_sync', 'webhook_enable', 'webhook_ngrok', 'webhook_url')
+        fields = ('id', 'url', 'description', 'baseurl', 'apikey', 'organization', 'organization_detail',
+                  'force_rebuild', 'last_update', 'last_sync', 'webhook_enable', 'webhook_ngrok', 'webhook_url')
         read_only_fields = ('id', 'url', 'raw_data', 'last_update', 'last_sync')
 
     def __init__(self, *args, **kwargs):
@@ -27,7 +45,7 @@ class DashboardSerializer(serializers.ModelSerializer):
             request = kwargs['context']['request']
             include_detail = request.GET.get('detail', "false")
             if include_detail.lower() == "false":
-                self.fields.pop("raw_data")
+                self.fields.pop("organization_detail")
 
 
 class ISEServerSerializer(serializers.ModelSerializer):
