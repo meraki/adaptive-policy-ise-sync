@@ -321,12 +321,12 @@ def home(request):
     else:
         dashboard = None
 
-    meraki_sgts = Tag.objects.filter(sourced_from="meraki")
-    meraki_sgacls = ACL.objects.filter(sourced_from="meraki")
-    meraki_policies = Policy.objects.filter(sourced_from="meraki")
-    ise_sgts = Tag.objects.filter(sourced_from="ise")
-    ise_sgacls = ACL.objects.filter(sourced_from="ise")
-    ise_policies = Policy.objects.filter(sourced_from="ise")
+    meraki_sgts = Tag.objects.filter(origin_org__isnull=False)
+    meraki_sgacls = ACL.objects.filter(origin_org__isnull=False)
+    meraki_policies = Policy.objects.filter(origin_org__isnull=False)
+    ise_sgts = Tag.objects.filter(origin_ise__isnull=False)
+    ise_sgacls = ACL.objects.filter(origin_ise__isnull=False)
+    ise_policies = Policy.objects.filter(origin_ise__isnull=False)
 
     e_meraki_sgts = []
     e_meraki_sgacls = []
@@ -482,13 +482,13 @@ def sgaclstatus(request):
             desc = sgacl.name
             crumbs = '''
                 <li class="current">Status</li>
-                <li><a href="/home/status-sgacl">SGACLs</a></li>
+                <li><a href="/home/status-sgacl">ACLs</a></li>
                 <li class="current">''' + desc + '''</li>
             '''
             return render(request, 'home/showsgacl.html', {"crumbs": crumbs, "menuopen": 1, "data": sgacl})
 
     sgacls = ACL.objects.filter(visible=True).order_by("-do_sync")
-    crumbs = '<li class="current">Status</li><li class="current">SGACLs</li>'
+    crumbs = '<li class="current">Status</li><li class="current">ACLs</li>'
     return render(request, 'home/sgaclstatus.html', {"crumbs": crumbs, "menuopen": 1, "data": {"sgacl": sgacls}})
 
 
