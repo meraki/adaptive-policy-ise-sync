@@ -10,6 +10,10 @@ from scripts.db_backup import backup
 from scripts.db_restore import restore
 import os
 from pathlib import Path
+import meraki
+from meraki.exceptions import APIError
+from django.conf import settings
+import json
 
 
 def startresync(request):
@@ -716,22 +720,65 @@ def merakiconfig(request):
     if not request.user.is_authenticated:
         return redirect('/login')
 
-    dashboards = Dashboard.objects.all()
-    if len(dashboards) > 0:
-        dashboard = dashboards[0]
-    else:
-        dashboard = None
+    if request.method == 'POST':
+        if request.GET.get("action") == "addorg":
+            postvars = request.POST
+            idlist = []
+            for v in postvars:
+                if "org-id-" in v:
+                    vid = v.replace("org-id-", "")
+                    idlist.append(vid)
 
-    # TODO: add mutli-org support
-    organizations = Organization.objects.all()
-    if len(organizations) > 0:
-        organization = organizations[0]
+            for itemid in idlist:
+                db = Dashboard.objects.filter(id=itemid)
+                orgid = request.POST.get("org-id-" + itemid)
+
+                if len(db) == 1 and orgid:
+                    if orgid not in db[0].organization.all():
+                        neworg = Organization.objects.create(orgid=orgid)
+                        db[0].organization.add(neworg)
+        else:
+            postvars = request.POST
+            idlist = []
+            for v in postvars:
+                if "intDesc-" in v:
+                    vid = v.replace("intDesc-", "")
+                    idlist.append(vid)
+
+            for itemid in idlist:
+                dash_desc = request.POST.get("intDesc-" + itemid)
+                dash_aurl = request.POST.get("intURL-" + itemid)
+                dash_akey = request.POST.get("intKey-" + itemid)
+                if dash_akey.find("****") < 0:
+                    dash_apik = dash_akey
+                else:
+                    dash_apik = None
+
+                if dash_apik:
+                    Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl,
+                                                               apikey=dash_apik)
+                else:
+                    Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl)
     else:
-        organization = None
+        orgid = request.GET.get("id")
+        if request.GET.get("action") == "delorg" and orgid:
+            Organization.objects.filter(id=orgid).delete()
+
+    dashboards = Dashboard.objects.all()
+    for dashboard in dashboards:
+        if dashboard.baseurl and dashboard.apikey and dashboard.apikey != "":
+            try:
+                db = meraki.DashboardAPI(base_url=dashboard.baseurl, api_key=dashboard.apikey, print_console=False,
+                                         output_log=False, caller=settings.CUSTOM_UA, suppress_logging=True)
+                orgs = db.organizations.getOrganizations()
+                dashboard.raw_data = orgs
+                dashboard.save()
+            except APIError:
+                dashboard.apikey = ""
+                dashboard.save()
 
     crumbs = '<li class="current">Configuration</li><li class="current">Meraki Dashboard</li>'
-    return render(request, 'home/merakiconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": dashboard,
-                                                      "org": organization})
+    return render(request, 'home/merakiconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": dashboards})
 
 
 def syncconfig(request):
