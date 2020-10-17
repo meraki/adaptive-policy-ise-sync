@@ -221,6 +221,9 @@ class Organization(models.Model):
     last_sync = models.DateTimeField(null=True, default=None, blank=True)
 
     def __str__(self):
+        dbs = self.dashboard_set.all()
+        if len(dbs) == 1:
+            return dbs[0].description + " (" + self.orgid + ")"
         return self.orgid
 
 
@@ -291,6 +294,8 @@ class ISEServer(models.Model):
         verbose_name_plural = "ISE Servers"
 
     def __str__(self):
+        if self.ipaddress:
+            return self.description + " (" + self.ipaddress + ")"
         return self.description
 
     def base_url(self):
