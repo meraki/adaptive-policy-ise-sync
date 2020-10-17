@@ -1,4 +1,5 @@
-from sync.models import ISEServer, Upload, UploadZip, Dashboard, Tag, ACL, Policy, SyncSession, Organization
+from sync.models import ISEServer, Upload, UploadZip, Dashboard, Tag, ACL, Policy, SyncSession, Organization, TagData, \
+    ACLData, PolicyData
 from django.shortcuts import redirect, reverse, render
 from django.contrib.auth import logout
 from django.http import JsonResponse
@@ -512,6 +513,75 @@ def policystatus(request):
     policies = Policy.objects.order_by("-do_sync")
     crumbs = '<li class="current">Status</li><li class="current">Policies</li>'
     return render(request, 'home/policystatus.html', {"crumbs": crumbs, "menuopen": 1, "data": {"policy": policies}})
+
+
+def sgtdata(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    pk = request.GET.get("id")
+    if pk:
+        sgts = TagData.objects.filter(id=pk)
+        if len(sgts) == 1:
+            sgt = sgts[0]
+            desc = sgt.tag.name + " (" + str(sgt.tag.tag_number) + ")"
+            ddesc = str(sgt.iseserver) if sgt.iseserver else \
+                str(sgt.organization)
+            crumbs = '''
+                <li class="current">Status</li>
+                <li><a href="/home/status-sgt">SGTs</a></li>
+                <li><a href="/home/status-sgt?id=''' + str(sgt.tag.id) + '''">''' + desc + '''</a></li>
+                <li class="current">''' + ddesc + '''</li>
+            '''
+            return render(request, 'home/showsgtdata.html', {"crumbs": crumbs, "menuopen": 1, "data": sgt})
+
+    return redirect(reverse('sgtstatus'))
+
+
+def sgacldata(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    pk = request.GET.get("id")
+    if pk:
+        sgacls = ACLData.objects.filter(id=pk)
+        if len(sgacls) == 1:
+            sgacl = sgacls[0]
+            desc = sgacl.acl.name
+            ddesc = str(sgacl.iseserver) if sgacl.iseserver else \
+                str(sgacl.organization)
+            crumbs = '''
+                <li class="current">Status</li>
+                <li><a href="/home/status-sgacl">ACLs</a></li>
+                <li><a href="/home/status-sgacl?id=''' + str(sgacl.acl.id) + '''">''' + desc + '''</a></li>
+                <li class="current">''' + ddesc + '''</li>
+            '''
+            return render(request, 'home/showsgacldata.html', {"crumbs": crumbs, "menuopen": 1, "data": sgacl})
+
+    return redirect(reverse('sgaclstatus'))
+
+
+def policydata(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    pk = request.GET.get("id")
+    if pk:
+        policies = PolicyData.objects.filter(id=pk)
+        if len(policies) == 1:
+            policy = policies[0]
+            desc = policy.policy.name + " (" + str(policy.policy.mapping) + ")"
+            ddesc = str(policy.iseserver) if policy.iseserver else \
+                str(policy.organization)
+            crumbs = '''
+                <li class="current">Status</li>
+                <li><a href="/home/status-policy">Policies</a></li>
+                <li><a href="/home/status-policy?id=''' + str(policy.policy.id) + '''">''' + desc + '''</a></li>
+                <li class="current">''' + ddesc + '''</li>
+            '''
+            return render(request, 'home/showpolicydata.html', {"crumbs": crumbs, "menuopen": 1, "data": policy})
+
+    return redirect(reverse('policystatus'))
 
 
 def certconfig(request):
