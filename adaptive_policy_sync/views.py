@@ -164,7 +164,6 @@ def setupmeraki(request):
     else:
         dashboard = None
 
-    # TODO: Multi-Org support
     organizations = Organization.objects.all()
     if len(organizations) > 0:
         organization = organizations[0]
