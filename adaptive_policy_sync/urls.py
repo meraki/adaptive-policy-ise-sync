@@ -76,6 +76,7 @@ urlpatterns = [
     url(r'^home/status-sgt-data$', apsyncviews.sgtdata, name='sgtdata'),
     url(r'^home/status-sgacl-data$', apsyncviews.sgacldata, name='sgacldata'),
     url(r'^home/status-policy-data$', apsyncviews.policydata, name='policydata'),
+    url(r'^home/upload-cert$', apsyncviews.certupload, name='certupload'),
     url(r'^home/config-cert$', apsyncviews.certconfig, name='certconfig'),
     url(r'^home/config-ise$', apsyncviews.iseconfig, name='iseconfig'),
     url(r'^home/config-meraki$', apsyncviews.merakiconfig, name='merakiconfig'),
