@@ -31,3 +31,10 @@ def password(value):
         return outkey
 
     return value
+
+
+@register.filter
+def search(search_list, search_id):
+    for sl in search_list:
+        if sl["id"] == search_id:
+            return sl["name"]
