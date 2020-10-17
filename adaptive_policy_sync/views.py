@@ -648,14 +648,68 @@ def iseconfig(request):
     if not request.user.is_authenticated:
         return redirect('/login')
 
+    if request.method == 'POST':
+        postvars = request.POST
+        idlist = []
+        for v in postvars:
+            if "intDesc-" in v:
+                vid = v.replace("intDesc-", "")
+                idlist.append(vid)
+
+        for itemid in idlist:
+            ise_desc = request.POST.get("intDesc-" + itemid)
+            ise_host = request.POST.get("intIP-" + itemid)
+            ise_user = request.POST.get("intUser-" + itemid)
+            ise_pswd = request.POST.get("intPass-" + itemid)
+            if ise_pswd.find("****") < 0:
+                ise_pass = ise_pswd
+            else:
+                ise_pass = None
+            ise_pxen = True if request.POST.get("intPxGrid-" + itemid) else False
+            ise_pxip = request.POST.get("intPxIP-" + itemid)
+            ise_pxcn = request.POST.get("intPxClName-" + itemid)
+            ise_pxcc = request.POST.get("clientcert-id-" + itemid)
+            ise_pxck = request.POST.get("clientkey-id-" + itemid)
+            ise_pxcp = request.POST.get("intPxClPass-" + itemid)
+            ise_pxsc = request.POST.get("servercert-id-" + itemid)
+            ise_rbld = True if request.POST.get("intRebuild-" + itemid) else False
+            crt_pxcc = Upload.objects.filter(id=ise_pxcc) if ise_pxcc else ""
+            crt_pxck = Upload.objects.filter(id=ise_pxck) if ise_pxck else ""
+            crt_pxsc = Upload.objects.filter(id=ise_pxsc) if ise_pxsc else ""
+            if len(crt_pxcc) == 1 and len(crt_pxck) == 1 and len(crt_pxsc) == 1:
+                crt_pxcc = crt_pxcc[0]
+                crt_pxck = crt_pxck[0]
+                crt_pxsc = crt_pxsc[0]
+
+            if itemid == "new":
+                ISEServer.objects.create(description=ise_desc, ipaddress=ise_host, username=ise_user, password=ise_pass,
+                                         pxgrid_enable=ise_pxen, pxgrid_ip=ise_pxip, pxgrid_cliname=ise_pxcn,
+                                         pxgrid_clicert=crt_pxcc, pxgrid_clikey=crt_pxck, pxgrid_clipw=ise_pxcp,
+                                         pxgrid_isecert=crt_pxsc, force_rebuild=True)
+            else:
+                if ise_pass:
+                    ISEServer.objects.filter(id=itemid).update(description=ise_desc, ipaddress=ise_host,
+                                                               username=ise_user, password=ise_pass,
+                                                               pxgrid_enable=ise_pxen, pxgrid_ip=ise_pxip,
+                                                               pxgrid_cliname=ise_pxcn, pxgrid_clicert=crt_pxcc,
+                                                               pxgrid_clikey=crt_pxck, pxgrid_clipw=ise_pxcp,
+                                                               pxgrid_isecert=crt_pxsc, force_rebuild=ise_rbld)
+                else:
+                    ISEServer.objects.filter(id=itemid).update(description=ise_desc, ipaddress=ise_host,
+                                                               username=ise_user,
+                                                               pxgrid_enable=ise_pxen, pxgrid_ip=ise_pxip,
+                                                               pxgrid_cliname=ise_pxcn, pxgrid_clicert=crt_pxcc,
+                                                               pxgrid_clikey=crt_pxck, pxgrid_clipw=ise_pxcp,
+                                                               pxgrid_isecert=crt_pxsc, force_rebuild=ise_rbld)
+
     iseservers = ISEServer.objects.all()
-    if len(iseservers) > 0:
-        iseserver = iseservers[0]
-    else:
-        iseserver = None
+    if len(iseservers) == 0:
+        iseservers = [{"id": "new"}]
+    certs = Upload.objects.all()
 
     crumbs = '<li class="current">Configuration</li><li class="current">ISE Server</li>'
-    return render(request, 'home/iseconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": iseserver})
+    return render(request, 'home/iseconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": iseservers,
+                                                   "certs": certs})
 
 
 def merakiconfig(request):
