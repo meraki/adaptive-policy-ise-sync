@@ -5,7 +5,7 @@
     <form method="POST" action="/home/config-ise" style="width:100%;padding:0px">
         <div class="md-data-table" style="width: 100%;">
             <div class="md-data-table__wrapper">
-                ISE Configuration
+                ISE Configuration  <a onclick="getLog('{{ data.0.raw_data }}')"><span class="icon icon-file-text_24"></span></a>
                 <table class="testTableClass">
                     <tbody class="md-data-table__tbody">
                     {% for i in data %}
@@ -235,6 +235,18 @@
                                 </div>
                             </td>
                         </tr>
+                        <tr>
+                            <td style="width: 4rem">Last Update</td>
+                            <td style="width: 24rem">
+                                {{ i.last_update }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">Last Sync</td>
+                            <td style="width: 24rem">
+                                {{ i.last_sync }}
+                            </td>
+                        </tr>
                     {% endfor %}
                     </tbody>
                 </table>
@@ -249,7 +261,7 @@
                         <div class="row" style="align-content:center; display:flex">
                             <div class="md-input-container columns medium-6">
                                 <div class="md-input__wrapper">
-                                    <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="/home/config-int">cancel</a>
+                                    <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="/home/config-ise">cancel</a>
                                 </div>
                             </div>
                         </div>
@@ -259,21 +271,30 @@
         </div>
     </form>
 
-    <div class="md-data-table" style="width: 100%;">
-        <div class="md-data-table__wrapper">
-            <table class="testTableClass">
-                <thead class="md-data-table__thead">
-                    <tr>
-                        <th style="width: 8rem">Field</th>
-                        <th style="width: 32rem">Value</th>
-                    </tr>
-                </thead>
-                <tbody class="md-data-table__tbody">
-                    <tr><td>Last Database Update</td><td>{{ data.0.last_update }}</td></tr>
-                    <tr><td>Last Sync</td><td>{{ data.0.last_sync }}</td></tr>
-                    <tr><td>ISE Raw Data</td><td><pre>{{ data.0.raw_data|pretty_json|safe }}</pre></td></tr>
-                </tbody>
-            </table>
+    <script>
+    function getLog(data) {
+        let new_dat = data.replaceAll("\"", '"').replaceAll("\n", "\\n");
+        document.getElementById("logdata").innerHTML = "<pre>" + JSON.stringify(JSON.parse(new_dat), null, 4) + "</pre>";
+        document.getElementById("logmodal").style = "display:inline;";
+    }
+    </script>
+
+    <div id="logmodal" class="md-modal__backdrop fade in" style="display:none; width: 100px;height: 50px;position:fixed; top: calc(50% - 25px);left: calc(50% - 50px);">
+        <div role="dialog" id="react-aria-modal-dialog" class="md-modal md-modal--default in" aria-labelledby="modal1">
+            <div class="md-modal__content">
+                <div class="md-modal__flex-container">
+                    <div class="md-modal__header">
+                        <span class="md-modal__title">ISE Server Data</span>
+                        <button type="button" class="md-close md-modal__close" onclick="document.getElementById('logmodal').style = 'display:none;'"></button>
+                    </div>
+                    <div id="logdata" class="md-modal__body"><form></form></div>
+                    <div class="md-modal__footer">
+                        <button class="md-button md-button--36 md-button--blue" alt="Submit Form" type="button" aria-label="Submit Form">
+                            <span class="md-button__children" onclick="document.getElementById('logmodal').style = 'display:none;'">OK</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}
