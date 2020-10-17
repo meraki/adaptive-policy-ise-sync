@@ -247,6 +247,7 @@ class Dashboard(models.Model):
     webhook_enable = models.BooleanField(default=False, editable=True)
     webhook_ngrok = models.BooleanField(default=False, editable=True)
     webhook_url = models.CharField(max_length=200, null=True, blank=True, default=None)
+    raw_data = models.JSONField(blank=True, null=True, default=None)
     organization = models.ManyToManyField(Organization, blank=True)
     force_rebuild = models.BooleanField("Force Dashboard Sync", default=False, editable=True)
     last_update = models.DateTimeField(default=django.utils.timezone.now)
