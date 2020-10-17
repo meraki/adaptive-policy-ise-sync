@@ -145,7 +145,7 @@
     }
 
     function getLog(data) {
-        let new_dat = data.replaceAll("\"", '"');
+        let new_dat = data.replaceAll("\"", '"').replaceAll("\n", "\\n");
         document.getElementById("logdata").innerHTML = "<pre>" + JSON.stringify(JSON.parse(new_dat), null, 4) + "</pre>";
         document.getElementById("logmodal").style = "display:inline;";
     }
