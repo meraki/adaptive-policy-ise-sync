@@ -22,7 +22,6 @@ def startresync(request):
 
 
 def delobject(request):
-    # /del/policy/64c6515b-e32f-476d-a043-20924f1ed560
     pathlist = request.path.split("/")
     if len(pathlist) == 4:
         if pathlist[2] == "sgt":
@@ -36,12 +35,6 @@ def delobject(request):
 
 
 def getmerakiorgs(request):
-    dashboards = Dashboard.objects.all()
-    if len(dashboards) > 0:
-        dashboard = dashboards[0]
-    else:
-        dashboard = None
-
     apikey = request.headers.get("X-Cisco-Meraki-API-Key")
     baseurl = request.headers.get("X-Cisco-Meraki-API-URL")
 
@@ -594,6 +587,31 @@ def certconfig(request):
     crumbs = '<li class="current">Configuration</li><li class="current">Certificates</li>'
     return render(request, 'home/certconfig.html', {"crumbs": crumbs, "menuopen": 2,
                                                     "data": {"zip": uploadzip, "file": upload}})
+
+
+def certupload(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    form = UploadForm(request.POST or None, request.FILES or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("certconfig"))
+    else:
+        act = request.GET.get("action")
+        cert_id = request.GET.get("id")
+        if act == "delzip" and cert_id:
+            UploadZip.objects.filter(id=cert_id).delete()
+            return redirect(reverse("certconfig"))
+
+    crumbs = '''
+        <li class="current">Configuration</li>
+        <li><a href="/home/config-cert">Certificates</a></li>
+        <li class="current">Upload</li>
+    '''
+
+    return render(request, 'home/cert_upload.html', {"crumbs": crumbs, "form": form, "menuopen": 2})
 
 
 def backuprestore(request):
