@@ -1000,7 +1000,8 @@ class TagData(models.Model):
         ordering = ('tag__tag_number', 'organization', 'iseserver')
 
     def hyperlink(self):
-        return "<a href='/admin/sync/tagdata/" + str(self.id) + "'>" + str(self) + "</a>"
+        # return "<a href='/admin/sync/tagdata/" + str(self.id) + "'>" + str(self) + "</a>"
+        return "<a href='/home/status-sgt-data?id=" + str(self.id) + "'>" + str(self) + "</a>"
 
     def __str__(self):
         if self.iseserver:
@@ -1050,7 +1051,8 @@ class ACLData(models.Model):
         verbose_name_plural = "ACL Data"
 
     def hyperlink(self):
-        return "<a href='/admin/sync/acldata/" + str(self.id) + "'>" + str(self) + "</a>"
+        # return "<a href='/admin/sync/acldata/" + str(self.id) + "'>" + str(self) + "</a>"
+        return "<a href='/home/status-sgacl-data?id=" + str(self.id) + "'>" + str(self) + "</a>"
 
     def __str__(self):
         if self.iseserver:
@@ -1140,7 +1142,8 @@ class PolicyData(models.Model):
         verbose_name_plural = "Policy Data"
 
     def hyperlink(self):
-        return "<a href='/admin/sync/policydata/" + str(self.id) + "'>" + str(self) + "</a>"
+        # return "<a href='/admin/sync/policydata/" + str(self.id) + "'>" + str(self) + "</a>"
+        return "<a href='/home/status-policy-data?id=" + str(self.id) + "'>" + str(self) + "</a>"
 
     def __str__(self):
         if self.iseserver:
