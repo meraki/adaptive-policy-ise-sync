@@ -1,7 +1,7 @@
 {% extends 'home/base.html' %}
 
 {% block content %}
-    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Uploaded Certificate Bundles (.zip Files)</h4>
+    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Uploaded Certificate Bundles (.zip Files)  <a title="Add Package" href="/home/upload-cert"><span class="icon icon-document-create_16"></span></a></h4>
     <div class="md-data-table" style="width: 100%;">
         <div class="md-data-table__wrapper">
             <table class="testTableClass">
@@ -10,36 +10,46 @@
                         <th style="width: 6rem">Description</th>
                         <th style="width: 24rem">File Name</th>
                         <th style="width: 12rem">Uploaded</th>
-                        <th style="width: 16rem">ID</th>
+                        <th style="width: 4rem">Action</th>
                     </tr>
                 </thead>
                 <tbody class="md-data-table__tbody">
                     {% for fz in data.zip %}
-                        <tr><td> {{ fz.base_desc }} </td><td> {{ fz.filename }} </td><td> {{ fz.uploaded_at }} </td><td> {{ fz.id }} </td></tr>
+                        <tr>
+                            <td> {{ fz.base_desc }} </td>
+                            <td> {{ fz.filename }} </td>
+                            <td> {{ fz.uploaded_at }} </td>
+                            <td>
+                                <a title="Delete Certificate" href="/home/upload-cert?id={{ fz.id }}&action=delzip"><span class="icon icon-delete_24"></span></a>
+                            </td>
+                        </tr>
+                        {% for fd in fz.upload_set.all %}
+                            <tr style="background-color: lightgray"><td><span class="icon icon-forward-message_16"></span> {{ fd.base_desc }} </td><td> {{ fd.filename }} </td><td> {{ fd.uploaded_at }} </td><td>&nbsp;</td></tr>
+                        {% endfor %}
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-    <br><br>
-    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Uploaded Certificate Files</h4>
-    <div class="md-data-table" style="width: 100%;">
-        <div class="md-data-table__wrapper">
-            <table class="testTableClass">
-                <thead class="md-data-table__thead">
-                    <tr>
-                        <th style="width: 6rem">Description</th>
-                        <th style="width: 24rem">File Name</th>
-                        <th style="width: 12rem">Uploaded</th>
-                        <th style="width: 16rem">ID</th>
-                    </tr>
-                </thead>
-                <tbody class="md-data-table__tbody">
-                    {% for fd in data.file %}
-                        <tr><td> {{ fd.base_desc }} </td><td> {{ fd.filename }} </td><td> {{ fd.uploaded_at }} </td><td> {{ fd.id }} </td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+{#    <br><br>#}
+{#    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Uploaded Certificate Files</h4>#}
+{#    <div class="md-data-table" style="width: 100%;">#}
+{#        <div class="md-data-table__wrapper">#}
+{#            <table class="testTableClass">#}
+{#                <thead class="md-data-table__thead">#}
+{#                    <tr>#}
+{#                        <th style="width: 6rem">Description</th>#}
+{#                        <th style="width: 24rem">File Name</th>#}
+{#                        <th style="width: 12rem">Uploaded</th>#}
+{#                        <th style="width: 16rem"></th>#}
+{#                    </tr>#}
+{#                </thead>#}
+{#                <tbody class="md-data-table__tbody">#}
+{#                    {% for fd in data.file %}#}
+{#                        <tr><td> {{ fd.base_desc }} </td><td> {{ fd.filename }} </td><td> {{ fd.uploaded_at }} </td><td> {{ fd.id }} </td></tr>#}
+{#                    {% endfor %}#}
+{#                </tbody>#}
+{#            </table>#}
+{#        </div>#}
+{#    </div>#}
 {% endblock %}
