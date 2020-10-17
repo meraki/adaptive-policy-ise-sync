@@ -100,7 +100,7 @@ def post_save_uploadzip(sender, instance=None, created=False, **kwargs):
                 continue
             fn = "upload/" + libitem
             open(fn, 'wb').write(unzipped.read(libitem))
-            i = Upload.objects.create(description=instance.description + "-" + fn, file=fn)
+            i = Upload.objects.create(description=instance.description + "-" + fn, file=fn, uploadzip=instance)
             i.save()
 
     post_save.connect(post_save_uploadzip, sender=UploadZip)
@@ -143,6 +143,7 @@ class Upload(models.Model):
     description = models.CharField(max_length=255, blank=True)
     file = models.FileField(upload_to='upload')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploadzip = models.ForeignKey(UploadZip, on_delete=models.CASCADE, null=True, default=None)
 
     def __str__(self):
         return self.description
