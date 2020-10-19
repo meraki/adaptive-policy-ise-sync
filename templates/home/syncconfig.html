@@ -53,7 +53,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <input type="hidden" id="iseserver-id-{{ i.id }}" name="iseserver-id-{{ i.id }}" value="" />
+                                <input type="hidden" id="iseserver-id-{{ i.id }}" name="iseserver-id-{{ i.id }}" value="{{ i.iseserver.id }}" />
                                 <input type="hidden" id="iseserver-name-{{ i.id }}" name="iseserver-name-{{ i.id }}" value="" />
                             </td>
                         </tr>
@@ -88,7 +88,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <input type="hidden" id="dashboard-id-{{ i.id }}" name="dashboard-id-{{ i.id }}" value="" />
+                                <input type="hidden" id="dashboard-id-{{ i.id }}" name="dashboard-id-{{ i.id }}" value="{{ i.dashboard.id }}" />
                                 <input type="hidden" id="dashboard-name-{{ i.id }}" name="dashboard-name-{{ i.id }}" value="" />
                             </td>
                         </tr>
@@ -97,9 +97,9 @@
                             <td style="width: 24rem">
                                 <div class="md-input-container md-radio">
                                     {% if i.ise_source %}
-                                    <input name="src" id="isesrc-{{ i.id }}" value="ise" type="radio" class="md-input md-radio__input" checked>
+                                    <input name="src-{{ i.id }}" id="isesrc-{{ i.id }}" value="ise" type="radio" class="md-input md-radio__input" checked>
                                     {% else %}
-                                    <input name="src" id="isesrc-{{ i.id }}" value="" type="radio" class="md-input md-radio__input">
+                                    <input name="src-{{ i.id }}" id="isesrc-{{ i.id }}" value="ise" type="radio" class="md-input md-radio__input">
                                     {% endif %}
                                     <label class="md-radio__label" for="isesrc-{{ i.id }}">
                                         <span>Cisco ISE</span>
@@ -107,9 +107,9 @@
                                 </div>
                                 <div class="md-input-container md-radio">
                                     {% if i.ise_source %}
-                                    <input name="src" id="mersrc-{{ i.id }}" value="" type="radio" class="md-input md-radio__input">
+                                    <input name="src-{{ i.id }}" id="mersrc-{{ i.id }}" value="meraki" type="radio" class="md-input md-radio__input">
                                     {% else %}
-                                    <input name="src" id="mersrc-{{ i.id }}" value="meraki" type="radio" class="md-input md-radio__input" checked>
+                                    <input name="src-{{ i.id }}" id="mersrc-{{ i.id }}" value="meraki" type="radio" class="md-input md-radio__input" checked>
                                     {% endif %}
                                     <label class="md-radio__label" for="mersrc-{{ i.id }}">
                                         <span>Meraki Dashboard</span>
