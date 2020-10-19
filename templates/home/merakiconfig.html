@@ -26,7 +26,7 @@
                             <td style="width: 4rem">Base API URL</td>
                             <td style="width: 24rem">
                                 <div class="md-input__wrapper">
-                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intURL-{{ i.id }}" name="intURL-{{ i.id }}" placeholder="Base API URL" value="{{ i.baseurl|default_if_none:'' }}">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intURL-{{ i.id }}" name="intURL-{{ i.id }}" placeholder="Base API URL" value="{{ i.baseurl|default_if_none:'https://api.meraki.com/api/v1' }}">
                                     <span class="md-input__after">
                                         <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intURL-{{ i.id }}')">
                                             <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
