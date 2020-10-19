@@ -754,11 +754,14 @@ def merakiconfig(request):
                 else:
                     dash_apik = None
 
-                if dash_apik:
-                    Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl,
-                                                               apikey=dash_apik)
+                if itemid == "new":
+                    Dashboard.objects.create(description=dash_desc, baseurl=dash_aurl, apikey=dash_apik)
                 else:
-                    Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl)
+                    if dash_apik:
+                        Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl,
+                                                                   apikey=dash_apik)
+                    else:
+                        Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl)
     else:
         orgid = request.GET.get("id")
         if request.GET.get("action") == "delorg" and orgid:
@@ -776,6 +779,8 @@ def merakiconfig(request):
             except APIError:
                 dashboard.apikey = ""
                 dashboard.save()
+    if len(dashboards) == 0:
+        dashboards = [{"id": "new"}]
 
     crumbs = '<li class="current">Configuration</li><li class="current">Meraki Dashboard</li>'
     return render(request, 'home/merakiconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": dashboards})
@@ -785,14 +790,46 @@ def syncconfig(request):
     if not request.user.is_authenticated:
         return redirect('/login')
 
+    if request.method == 'POST':
+        postvars = request.POST
+        idlist = []
+        for v in postvars:
+            if "intDesc-" in v:
+                vid = v.replace("intDesc-", "")
+                idlist.append(vid)
+
+        for itemid in idlist:
+            sync_desc = request.POST.get("intDesc-" + itemid)
+            sync_isvr = request.POST.get("iseserver-id-" + itemid)
+            sync_dash = request.POST.get("dashboard-id-" + itemid)
+            opt_sorc = request.POST.get("src-" + itemid)
+            sync_sorc = True if opt_sorc == "ise" else False
+            opt_rbld = request.POST.get("intRebuild-" + itemid)
+            sync_rbld = True if opt_rbld else False
+            opt_sync = request.POST.get("intSync-" + itemid)
+            sync_sync = True if opt_sync else False
+            opt_aply = request.POST.get("intApply-" + itemid)
+            sync_aply = True if opt_aply else False
+            sync_itvl = request.POST.get("intInterval-" + itemid)
+            if itemid == "new":
+                SyncSession.objects.create(description=sync_desc, iseserver=sync_isvr, dashboard=sync_dash,
+                                           ise_source=sync_sorc, force_rebuild=sync_rbld, sync_enabled=sync_sync,
+                                           apply_changes=sync_aply, sync_interval=sync_itvl)
+            else:
+                SyncSession.objects.filter(id=itemid).update(description=sync_desc, iseserver=sync_isvr,
+                                                             dashboard=sync_dash, ise_source=sync_sorc,
+                                                             force_rebuild=sync_rbld, sync_enabled=sync_sync,
+                                                             apply_changes=sync_aply, sync_interval=sync_itvl)
+
     syncs = SyncSession.objects.all()
-    if len(syncs) > 0:
-        sync = syncs[0]
-    else:
-        sync = None
+    if len(syncs) == 0:
+        syncs = [{"id": "new"}]
+    iseservers = ISEServer.objects.all()
+    dashboards = Dashboard.objects.all()
 
     crumbs = '<li class="current">Configuration</li><li class="current">Synchronization</li>'
-    return render(request, 'home/syncconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": sync})
+    return render(request, 'home/syncconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": syncs,
+                                                    "iseservers": iseservers, "dashboards": dashboards})
 
 
 class MyLoginView(auth_views.LoginView):
