@@ -14,6 +14,10 @@ def ingest_ise_data(accounts, log):
     dt = make_aware(datetime.datetime.now())
 
     for sa in accounts:
+        if not sa.sync_enabled:
+            append_log(log, "ise_monitor::ingest_server_data::sync session not set to allow sync;")
+            return
+
         ise = None
         a = sa.iseserver
         append_log(log, "ise_monitor::ingest_server_data::Resync -", a.description)
