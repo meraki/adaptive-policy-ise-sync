@@ -18,6 +18,10 @@ def ingest_dashboard_data(accounts, log):
     dt = make_aware(datetime.datetime.now())
 
     for sa in accounts:
+        if not sa.sync_enabled:
+            append_log(log, "dashboard_monitor::digest_database_data::sync session not set to allow sync;")
+            return
+
         a = sa.dashboard
         append_log(log, "dashboard_monitor::ingest_dashboard_data::Resync -", a.description)
         dashboard = meraki.DashboardAPI(base_url=a.baseurl, api_key=a.apikey, print_console=False, output_log=False,
