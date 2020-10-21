@@ -1,7 +1,8 @@
 # import os
 import pytest
 from django.forms.models import model_to_dict
-from .models import ISEServer, Dashboard, Organization, SyncSession, Tag, ACL, Policy, TagData
+from .models import ISEServer, Dashboard, Organization, SyncSession, Tag, ACL, Policy, TagData, UploadZip, Upload
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 import sync._config
 import meraki
@@ -24,23 +25,12 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 # from selenium.webdriver.common.action_chains import ActionChains
 # from selenium.webdriver.firefox.webdriver import WebDriver
 # import urllib.parse
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
+import scripts.px_subscribe
 
 
-# from selenium.webdriver import Remote
-# from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-# import environ
-#
-#
-# env = environ.Env()
-#
-#
-# @pytest.fixture(scope='session')
-# def selenium() -> Remote:
-#     driver = Remote(
-#         command_executor=env('SELENIUM_HOST', default='http://selenium:4444/wd/hub'),
-#         desired_capabilities=DesiredCapabilities.FIREFOX
-#     )
-#     yield driver
+cron = BackgroundScheduler()
 
 
 def reset_dashboard(db=None, baseurl=None, apikey=None, orgid=None):
@@ -54,9 +44,6 @@ def reset_dashboard(db=None, baseurl=None, apikey=None, orgid=None):
         dborgid = orgid
     else:
         assert False
-    # default_sgts = [d['value'] for d in sync._config.meraki_default_sgts]
-    # default_sgacls = [d['name'] for d in sync._config.meraki_default_sgacls]
-    # default_policies = [d['name'] for d in sync._config.meraki_default_policies]
 
     sgts = meraki_read_sgt(dashboard, dborgid)
     sgacls = meraki_read_sgacl(dashboard, dborgid)
@@ -69,13 +56,6 @@ def reset_dashboard(db=None, baseurl=None, apikey=None, orgid=None):
     for s in sgacls:
         print("Removing SGACL", s["name"], "from Meraki Dashboard...")
         meraki_delete_sgacl(dashboard, dborgid, s["aclId"])
-
-    # for s in sgpolicies:
-    #     print("Removing Egress Policy", s["name"], "from Meraki Dashboard...")
-    #     # We technically shouldn't need to remove policies; they will clear from dashboard when the groups are deleted;
-    #     #  If the group did get deleted successfully, this will error out, hence the try block
-    #     meraki_update_sgpolicy(dashboard, db.orgid, srcGroupId=s["srcGroupId"], dstGroupId=s["dstGroupId"],
-    #                            aclIds=None, catchAllRule="global", name="")
 
     sgts = meraki_read_sgt(dashboard, dborgid)
     sgacls = meraki_read_sgacl(dashboard, dborgid)
@@ -211,8 +191,11 @@ def arg(request):
 @pytest.mark.django_db
 def setup_ise24_reset():
     reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
-                    orgid=sync._config.merakiapi["orgid"])
+                    orgid=sync._config.merakiapi["testorg1_id"])
+    reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
+                    orgid=sync._config.merakiapi["testorg2_id"])
     Dashboard.objects.all().delete()
+    Organization.objects.all().delete()
     SyncSession.objects.all().delete()
     ISEServer.objects.all().delete()
     Tag.objects.all().delete()
@@ -227,8 +210,11 @@ def setup_ise24_reset():
 @pytest.mark.django_db
 def setup_ise26_reset():
     reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
-                    orgid=sync._config.merakiapi["orgid"])
+                    orgid=sync._config.merakiapi["testorg1_id"])
+    reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
+                    orgid=sync._config.merakiapi["testorg2_id"])
     Dashboard.objects.all().delete()
+    Organization.objects.all().delete()
     SyncSession.objects.all().delete()
     ISEServer.objects.all().delete()
     Tag.objects.all().delete()
@@ -243,8 +229,11 @@ def setup_ise26_reset():
 @pytest.mark.django_db
 def setup_ise27_reset():
     reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
-                    orgid=sync._config.merakiapi["orgid"])
+                    orgid=sync._config.merakiapi["testorg1_id"])
+    reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
+                    orgid=sync._config.merakiapi["testorg2_id"])
     Dashboard.objects.all().delete()
+    Organization.objects.all().delete()
     SyncSession.objects.all().delete()
     ISEServer.objects.all().delete()
     Tag.objects.all().delete()
@@ -259,8 +248,11 @@ def setup_ise27_reset():
 @pytest.mark.django_db
 def setup_ise30_reset():
     reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
-                    orgid=sync._config.merakiapi["orgid"])
+                    orgid=sync._config.merakiapi["testorg1_id"])
+    reset_dashboard(baseurl="https://api.meraki.com/api/v1", apikey=sync._config.merakiapi["apikey"],
+                    orgid=sync._config.merakiapi["testorg2_id"])
     Dashboard.objects.all().delete()
+    Organization.objects.all().delete()
     SyncSession.objects.all().delete()
     ISEServer.objects.all().delete()
     Tag.objects.all().delete()
@@ -275,7 +267,7 @@ def setup_ise30_reset():
 @pytest.mark.django_db
 def setup_ise24_i_src():
     # cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
-    #                               orgid=sync._config.merakiapi["orgid"],
+    #                               orgid=sync._config.merakiapi["testorg1_id"],
     #                               baseurl="https://api.meraki.com/api/v1")
     # reset_dashboard(db=cm)
     #
@@ -288,7 +280,7 @@ def setup_ise24_i_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -307,7 +299,7 @@ def setup_ise26_i_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -326,7 +318,7 @@ def setup_ise27_i_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -345,7 +337,7 @@ def setup_ise30_i_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -364,7 +356,7 @@ def setup_ise24_m_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -383,7 +375,7 @@ def setup_ise26_m_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -402,7 +394,7 @@ def setup_ise27_m_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -421,7 +413,7 @@ def setup_ise30_m_src():
 
     cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
                                   baseurl="https://api.meraki.com/api/v1")
-    org = Organization.objects.create(orgid=sync._config.merakiapi["orgid"])
+    org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
     cm.organization.add(org)
     ci = ISEServer.objects.create(description=s["desc"], ipaddress=s["ip"], username=s["user"],
                                   password=s["pass"])
@@ -773,50 +765,6 @@ def test_policies_in_database(arg):
     assert success
 
 
-# @pytest.mark.parametrize('arg', ['setup_ise24_data_sync_i_src', 'setup_ise26_data_sync_i_src',
-#                                  'setup_ise27_data_sync_i_src', 'setup_ise30_data_sync_i_src',
-#                                  'setup_ise24_data_sync_m_src', 'setup_ise26_data_sync_m_src',
-#                                  'setup_ise27_data_sync_m_src', 'setup_ise30_data_sync_m_src'], indirect=True)
-# @pytest.mark.django_db
-# def test_ise_sync_success(arg):
-#     """Perform a full sync and ensure SGTs, SGACLs and Policies have synced correctly"""
-#     success = True
-#     sgts = Tag.objects.all()
-#     for s in sgts:
-#         if s.tag_number in sync._config.sync_tags:
-#             if not s.do_sync or not s.objects_match(bool_only=True):
-#                 success = False
-#                 print("1 (FAIL) :", model_to_dict(s))
-#             else:
-#                 print("1 (SUCCESS) :", model_to_dict(s))
-#     sgacls = ACL.objects.filter(visible=True)
-#     for s in sgacls:
-#         if s.name in sync._config.expected_sgacls:
-#             if not s.objects_match(bool_only=True):
-#                 success = False
-#                 print("2 (FAIL-NO_MATCH) :", model_to_dict(s))
-#         else:
-#             if s.do_sync:
-#                 success = False
-#                 print("2 (FAIL-SHOULD_NOT_SYNC) :", model_to_dict(s))
-#         if success:
-#             print("2 (SUCCESS) :", model_to_dict(s))
-#     policies = Policy.objects.all()
-#     for s in policies:
-#         if s.name in sync._config.expected_policies:
-#             if not s.objects_match(bool_only=True):
-#                 success = False
-#                 print("3 (FAIL-NO_MATCH) :", model_to_dict(s))
-#         else:
-#             if s.do_sync:
-#                 success = False
-#                 print("3 (FAIL-SHOULD_NOT_SYNC) :", model_to_dict(s))
-#         if success:
-#             print("3 (SUCCESS) :", model_to_dict(s))
-#
-#     assert success
-
-
 @pytest.mark.parametrize('arg', ['setup_ise24_data_sync_i_src', 'setup_ise26_data_sync_i_src',
                                  'setup_ise27_data_sync_i_src', 'setup_ise30_data_sync_i_src',
                                  'setup_ise24_data_sync_m_src', 'setup_ise26_data_sync_m_src',
@@ -885,15 +833,17 @@ def push_ise_updates():
         print("One or more elements missing during search", upd_sgt, upd_sgacl, upd_policy)
         assert False
 
-    ise.update_egressmatrixcell(upd_policy["id"], upd_policy["sourceSgtId"], upd_policy["destinationSgtId"],
-                                sync._config.update_ise_policy["default"],
-                                acls=sync._config.update_ise_policy["acls"],
-                                description=sync._config.update_ise_policy["description"])
-    ise.update_sgacl(upd_sgacl["id"], sync._config.update_ise_sgacl["name"],
-                     sync._config.update_ise_sgacl["description"],
-                     sync._config.update_ise_sgacl["version"], sync._config.update_ise_sgacl["aclcontent"])
-    ise.update_sgt(upd_sgt["id"], sync._config.update_ise_sgt["name"], sync._config.update_ise_sgt["description"],
-                   sync._config.update_ise_sgt["value"])
+    emc = ise.update_egressmatrixcell(upd_policy["id"], upd_policy["sourceSgtId"], upd_policy["destinationSgtId"],
+                                      sync._config.update_ise_policy["default"],
+                                      acls=sync._config.update_ise_policy["acls"],
+                                      description=sync._config.update_ise_policy["description"])
+    sgacl = ise.update_sgacl(upd_sgacl["id"], sync._config.update_ise_sgacl["name"],
+                             sync._config.update_ise_sgacl["description"],
+                             sync._config.update_ise_sgacl["version"], sync._config.update_ise_sgacl["aclcontent"])
+    sgt = ise.update_sgt(upd_sgt["id"], sync._config.update_ise_sgt["name"], sync._config.update_ise_sgt["description"],
+                         sync._config.update_ise_sgt["value"])
+
+    # print("#####Updates", emc, sgacl, sgt)
 
 
 def push_meraki_updates():
@@ -1025,7 +975,7 @@ def check_sync_results(d_sgt, d_acl, d_policy):
                                  'setup_ise27_data_sync_m_src', 'setup_ise30_data_sync_m_src'], indirect=True)
 @pytest.mark.django_db
 def test_update_element_success(arg):
-    """Perform a full sync and then update each side for SGT, SGACL and Policy"""
+    """Perform a full sync and then update each side for SGT, SGACL and Policy; verify elements update correctly"""
     sa = SyncSession.objects.all()[0]
 
     if sa.ise_source:
@@ -1301,157 +1251,237 @@ def test_delete_element_revert(arg):
     assert success
 
 
-# @pytest.mark.parametrize('arg', ['setup_ise24_i_src', 'setup_ise26_i_src', 'setup_ise27_i_src', 'setup_ise30_i_src'],
-#                          indirect=True)
-# @pytest.mark.django_db
-# def test_ui_setup(arg):
-    # selenium.get('http://127.0.0.1:8000')
-    # assert "My Site" in selenium.title
-    # browser.get('http://127.0.0.1:8000')
-    # assert False
+class pxGrid(StaticLiveServerTestCase):
+    @classmethod
+    def test_pxgrid_setup(self, src=None, ci=None, un=None):
+        success = True
+        if not src or not ci or not un:
+            pytest.skip("unsupported configuration")
+        UploadZip.objects.create(description=ci["cliname"], file=ci["cert"])
+        uploads = Upload.objects.all()
+        cli_cert = cli_key = svr_cert = None
+        for upload in uploads:
+            if upload.filename() == ci["clicert"]:
+                cli_cert = upload
+            if upload.filename() == ci["clikey"]:
+                cli_key = upload
+            if upload.filename() == ci["svrcert"]:
+                svr_cert = upload
+        if not cli_cert or not cli_key or not svr_cert:
+            print("Error locating correct certs", uploads)
+            assert False
+        else:
+            cm = Dashboard.objects.create(description="Meraki", apikey=sync._config.merakiapi["apikey"],
+                                          baseurl="https://api.meraki.com/api/v1")
+            org = Organization.objects.create(orgid=sync._config.merakiapi["testorg1_id"])
+            cm.organization.add(org)
+            ci = ISEServer.objects.create(description=ci["desc"], ipaddress=ci["ip"], username=ci["user"],
+                                          password=ci["pass"], pxgrid_enable=True, pxgrid_cliname=ci["cliname"],
+                                          pxgrid_clicert=cli_cert, pxgrid_clikey=cli_key, pxgrid_clipw=ci["pass"],
+                                          pxgrid_isecert=svr_cert, pxgrid_ip=ci["ip"])
+            SyncSession.objects.create(description="Sync", dashboard=cm, iseserver=ci, force_rebuild=True,
+                                       ise_source=True)
 
-    # driver = webdriver.Firefox()
-    # driver.get('http://127.0.0.1:8000')
-    # username = driver.find_element_by_id('username')
-    # password = driver.find_element_by_id('id_password')
-    # submit = driver.find_element_by_tag_name('button')
-    # username.send_keys('unittests')
-    # password.send_keys('Phg7aCyItk4QMk')
-    # submit.send_keys(Keys.RETURN)
-#
-# def test_page_loads(self):
-#     self.selenium.get(self.live_server_url)
-#     assert "My Site" in self.selenium.title
+            # Ingest default elements into database
+            if src == "ise":
+                scripts.ise_monitor.sync_ise()
+                scripts.dashboard_monitor.sync_dashboard()
+            else:
+                scripts.dashboard_monitor.sync_dashboard()
+                scripts.ise_monitor.sync_ise()
 
+            # Mark tags to sync
+            sgts = Tag.objects.order_by("tag_number")
+            for s in sgts:
+                if s.tag_number in sync._config.sync_tags:
+                    print("Enabling sync for tag", s.tag_number, "...")
+                    s.do_sync = True
+                    s.save()
 
-# class Browser:
-#     def __init__(self, driver):
-#         self.driver = driver
-#         self.live_server_url = None  # will be set during test set up
-#
-#     @property
-#     def page_source(self):
-#         return self.driver.page_source
-#
-#     def close(self):
-#         self.driver.close()
-#
-#     def get(self, url):
-#         full_url = urllib.parse.urljoin(self.live_server_url, url)
-#         self.driver.get(full_url)
-#
-#     def find_element(self, **kwargs):
-#         assert len(kwargs) == 1   # we want exactly one named parameter here
-#         name, value = list(kwargs.items())[0]
-#         func_name = "find_element_by_" + name
-#         func = getattr(self.driver, func_name)
-#         return func(value)
+            # Re-run sync to push updates out
+            if src == "ise":
+                scripts.ise_monitor.sync_ise()
+                scripts.dashboard_monitor.sync_dashboard()
+            else:
+                scripts.dashboard_monitor.sync_dashboard()
+                scripts.ise_monitor.sync_ise()
 
+            # Now, we will start the pxgrid monitor and make more changes
+            print("Starting Monitor...")
+            cron.add_job(scripts.px_subscribe.job, id="pxgrid_monitor", kwargs={"scheduler": cron})
+            cron.start()
 
-# class TestDashboard(StaticLiveServerTestCase):
-#     # @classmethod
-#     # def setUpClass(cls):
-#     #     super().setUpClass()
-#     #     driver = webdriver.Firefox()
-#     #     cls.browser = Browser(driver)
-#     #
-#     # def setUp(self):
-#     #     self.browser.base_url = self.live_server_url
-#     #
-#     # @classmethod
-#     # def tearDownClass(cls):
-#     #     cls.browser.close()
-#     #     super().tearDownClass()
-#     #
-#     # def tearDown(self):
-#     #     self.browser.close()
-#     #     super().tearDown()
-#
-#     @classmethod
-#     def setUpClass(cls):
-#         super().setUpClass()
-#         cls.browser = WebDriver()
-#         cls.browser.implicitly_wait(10)
-#
-#     @classmethod
-#     def tearDownClass(cls):
-#         cls.browser.quit()
-#         super().tearDownClass()
-#
-#     def test_login(self):
-#         self.browser.get("/")
-#         username_input = self.browser.find_element_by_id("login")
-#         username_input.send_keys('unittests')
-#         password_input = self.browser.find_element_by_id("password")
-#         password_input.send_keys('Phg7aCyItk4QMk')
-#         self.browser.find_element_by_id("button").click()
-#
-#     # def test_site_loads(self, browser: Remote, test_server: LiveServer):
-#     #     print(test_server.url)
-#     #     # browser.get(test_server.url)
-#     #     #
-#     #     # assert 'Welcome' in browser.title
-#     #     assert False
-#     #
-#     # def test_valid_login(self, browser: Remote, test_server: LiveServer, user: settings.AUTH_USER_MODEL):
-#     #     assert False
-#     #     password = 'testpassword'
-#     #     user.set_password(password)
-#     #     user.save()
-#     #
-#     #     browser.get(test_server.url + '/accounts/login/')
-#     #     browser.find_element_by_name('login').send_keys(user.email)
-#     #     browser.find_element_by_name('password').send_keys(password)
-#     #     browser.find_element_by_css_selector('button[type="submit"]').click()
-#     #     browser.implicitly_wait(2)
-#     #
-#     #     assert f'Successfully signed in as {user.username}' in browser.page_source
+            print("Sleeping 10 seconds to allow websocket to establish...")
+            time.sleep(10)
+            print("Initiating updates...")
+            if src == "ise":
+                push_ise_updates()
+            else:
+                push_meraki_updates()
+
+            print("Checking results...")
+            success = check_sync_results(sync._config.update_ise_sgt, sync._config.update_ise_sgacl,
+                                         sync._config.update_ise_policy)
+            print("Stopping Monitor")
+            cron.remove_all_jobs()
+        assert success
+
+    # def test_web_ise_24_i(self):
+    #     assert self.test_pxgrid_setup("ise", setup_ise24_reset(), "ise_src_24")
+    #
+    # def test_web_ise_26_i(self):
+    #     assert self.test_pxgrid_setup("ise", setup_ise26_reset(), "ise_src_26")
+    #
+    def test_web_ise_27_i(self):
+        assert self.test_pxgrid_setup("ise", setup_ise27_reset(), "ise_src_27")
+
+    # def test_web_ise_30_i(self):
+    #     assert self.test_pxgrid_setup("ise", setup_ise30_reset(), "ise_src_30")
+    #
+    # def test_web_ise_24_m(self):
+    #     assert self.test_pxgrid_setup("meraki", setup_ise24_reset(), "meraki_src_24")
+    #
+    # def test_web_ise_26_m(self):
+    #     assert self.test_pxgrid_setup("meraki", setup_ise26_reset(), "meraki_src_26")
+    #
+    # def test_web_ise_27_m(self):
+    #     assert self.test_pxgrid_setup("meraki", setup_ise27_reset(), "meraki_src_27")
+    #
+    # def test_web_ise_30_m(self):
+    #     assert self.test_pxgrid_setup("meraki", setup_ise30_reset(), "meraki_src_30")
 
 
-# class Browser(LiveServerTestCase):
-#     @classmethod
-#     def setUpClass(cls):
-#         super().setUpClass()
-#         # cls.selenium = WebDriver()
-#         cls.selenium = webdriver.Chrome()
-#         cls.selenium.implicitly_wait(10)
-#
-#     @classmethod
-#     def tearDownClass(cls):
-#         # cls.selenium.quit()
-#         super().tearDownClass()
-#
-#
-# @pytest.mark.parametrize('arg', ['setup_ise24_i_src', 'setup_ise26_i_src', 'setup_ise27_i_src',
-#                                  'setup_ise30_i_src', 'setup_ise24_m_src', 'setup_ise26_m_src',
-#                                  'setup_ise27_m_src', 'setup_ise30_m_src'], indirect=True)
-# @pytest.mark.django_db
-# def test_login(arg):
-#     my_admin = User.objects.create_superuser(sync._config.test_user["username"], sync._config.test_user["email"],
-#                                              sync._config.test_user["password"])
-#     if not my_admin:
-#         print("Unable to create superuser", my_admin)
-#         exit()
-#     b = Browser()
-#     b.setUpClass()
-#     ci = ISEServer.objects.all()[0]
-#
-#     b.selenium.get('%s%s' % (b.live_server_url, '/login/'))
-#     username_input = b.selenium.find_element_by_name("username")
-#     username_input.send_keys(sync._config.test_user["username"])
-#     password_input = b.selenium.find_element_by_name("password")
-#     password_input.send_keys(sync._config.test_user["password"])
-#     b.selenium.find_element_by_name("login").click()
-#     b.selenium.find_element_by_name("start").click()
-#     iseip_input = b.selenium.find_element_by_name("iseIP")
-#     iseip_input.send_keys(ci.ipaddress)
-#     iseusername_input = b.selenium.find_element_by_name("iseUser")
-#     iseusername_input.send_keys(ci.username)
-#     isepassword_input = b.selenium.find_element_by_name("isePass")
-#     isepassword_input.send_keys(ci.username)
-#     b.selenium.find_element_by_name("next").click()
-#
-#     b.tearDownClass()
+class APITests(StaticLiveServerTestCase):
+    @classmethod
+    def test_api_setup(self, src=None, ci=None, un=None):
+        if not src or not ci or not un:
+            pytest.skip("unsupported configuration")
+        user = User.objects.create_superuser(sync._config.test_user["username"], sync._config.test_user["email"],
+                                             sync._config.test_user["password"])
+        t = Token.objects.get_or_create(user=user, key=sync._config.test_user["apikey"])
+        success = True
+        headers = {"Authorization": "Bearer " + sync._config.test_user["apikey"],
+                   "Content-Type": "application/json"}
+
+        url = self.live_server_url + "/api/v0/iseserver/"
+        data = {"description": ci["desc"],
+                "ipaddress": ci["ip"],
+                "username": ci["user"],
+                "password": ci["pass"],
+                "pxgrid_enable": False}
+        ret = requests.request("POST", url, json=data, headers=headers)
+        ise_json = ret.json()
+
+        url = self.live_server_url + "/api/v0/organization/"
+        data = {"orgid": sync._config.merakiapi["testorg1_id"]}
+        ret = requests.request("POST", url, json=data, headers=headers)
+        org1_json = ret.json()
+
+        if src == "ise":
+            print("Source is ISE; Configuring multi-org for Meraki")
+            url = self.live_server_url + "/api/v0/organization/"
+            data = {"orgid": sync._config.merakiapi["testorg2_id"]}
+            ret = requests.request("POST", url, json=data, headers=headers)
+            org2_json = ret.json()
+
+            url = self.live_server_url + "/api/v0/dashboard/"
+            data = {"description": "My Meraki Dashboard",
+                    "apikey": sync._config.merakiapi["apikey"],
+                    "webhook_enable": False,
+                    "webhook_ngrok": False,
+                    "webhook_url": "",
+                    "organization":
+                        [org1_json.get("id"), org2_json.get("id")]}
+            ret = requests.request("POST", url, json=data, headers=headers)
+            dashboard_json = ret.json()
+        else:
+            print("Source is Meraki; Configuring single org only")
+            url = self.live_server_url + "/api/v0/dashboard/"
+            data = {"description": "My Meraki Dashboard",
+                    "apikey": sync._config.merakiapi["apikey"],
+                    "webhook_enable": False,
+                    "webhook_ngrok": False,
+                    "webhook_url": "",
+                    "organization":
+                        [org1_json.get("id")]}
+            ret = requests.request("POST", url, json=data, headers=headers)
+            dashboard_json = ret.json()
+
+        url = self.live_server_url + "/api/v0/syncsession/"
+        data = {"description": "Sync Session",
+                "dashboard": dashboard_json.get("id"),
+                "iseserver": ise_json.get("id"),
+                "ise_source": True,
+                "sync_enabled": True,
+                "apply_changes": True,
+                "sync_interval": 300}
+        ret = requests.request("POST", url, json=data, headers=headers)
+        ss_json = ret.json()
+
+        if src == "ise":
+            msg, log = scripts.ise_monitor.sync_ise()
+            msg, log = scripts.dashboard_monitor.sync_dashboard()
+        else:
+            msg, log = scripts.dashboard_monitor.sync_dashboard()
+            msg, log = scripts.ise_monitor.sync_ise()
+
+        url = self.live_server_url + "/api/v0/tag/"
+        ret = requests.request("GET", url, headers=headers)
+        tags = ret.json()
+
+        for t in tags["results"]:
+            if t.get("tag_number") in sync._config.sync_tags:
+                url = self.live_server_url + "/api/v0/tag/" + str(t.get("id", "")) + "/"
+                data = {"do_sync": True}
+                ret = requests.request("PATCH", url, json=data, headers=headers)
+                tag_json = ret.json()
+
+        if src == "ise":
+            push_ise_updates()
+        else:
+            push_meraki_updates()
+
+        url = self.live_server_url + "/api/v0/syncsession/" + ss_json.get("id", "") + "/"
+        data = {"force_rebuild": True}
+        ret = requests.request("PATCH", url, json=data, headers=headers)
+        ss_json = ret.json()
+
+        if src == "ise":
+            msg, log = scripts.ise_monitor.sync_ise()
+            msg, log = scripts.dashboard_monitor.sync_dashboard()
+        else:
+            msg, log = scripts.dashboard_monitor.sync_dashboard()
+            msg, log = scripts.ise_monitor.sync_ise()
+
+        success = check_sync_results(sync._config.update_ise_sgt, sync._config.update_ise_sgacl,
+                                     sync._config.update_ise_policy)
+
+        return success
+
+    def test_web_ise_24_i(self):
+        assert self.test_api_setup("ise", setup_ise24_reset(), "ise_src_24")
+
+    def test_web_ise_26_i(self):
+        assert self.test_api_setup("ise", setup_ise26_reset(), "ise_src_26")
+
+    def test_web_ise_27_i(self):
+        assert self.test_api_setup("ise", setup_ise27_reset(), "ise_src_27")
+
+    def test_web_ise_30_i(self):
+        assert self.test_api_setup("ise", setup_ise30_reset(), "ise_src_30")
+
+    def test_web_ise_24_m(self):
+        assert self.test_api_setup("meraki", setup_ise24_reset(), "meraki_src_24")
+
+    def test_web_ise_26_m(self):
+        assert self.test_api_setup("meraki", setup_ise26_reset(), "meraki_src_26")
+
+    def test_web_ise_27_m(self):
+        assert self.test_api_setup("meraki", setup_ise27_reset(), "meraki_src_27")
+
+    def test_web_ise_30_m(self):
+        assert self.test_api_setup("meraki", setup_ise30_reset(), "meraki_src_30")
+
 
 class BrowserTests(StaticLiveServerTestCase):
     # https://medium.com/@unionproject88/django-and-selenium-unit-tests-1136041f8d24
@@ -1506,7 +1536,7 @@ class BrowserTests(StaticLiveServerTestCase):
         time.sleep(3)
         self.selenium.find_element_by_id("btnorg").click()
         time.sleep(1)
-        element = self.selenium.find_element_by_id(sync._config.merakiapi["orgid"])
+        element = self.selenium.find_element_by_id(sync._config.merakiapi["testorg1_id"])
         coordinates = element.location_once_scrolled_into_view
         self.selenium.execute_script('window.scrollTo({}, {});'.format(coordinates['x'], coordinates['y']))
         element.click()
@@ -1647,190 +1677,3 @@ class BrowserTests(StaticLiveServerTestCase):
     def test_web_ise_30_m(self):
         assert self.test_web_setup("meraki", setup_ise30_reset(), "meraki_src_30")
 
-    # def test_web_setup(self):
-    #     success = True
-    #     srclist = ["ise", "meraki"]
-    #     loggedin = False
-    #     for src in srclist:
-    #         for svr in sync._config.servers:
-    #             print(src, svr)
-    #
-    #             if svr == "2.4":
-    #                 ci = setup_ise24_reset()
-    #             elif svr == "2.6":
-    #                 ci = setup_ise26_reset()
-    #             elif svr == "2.7":
-    #                 ci = setup_ise27_reset()
-    #             elif svr == "3.0":
-    #                 ci = setup_ise30_reset()
-    #             else:
-    #                 assert False
-    #
-    #             self.selenium.get(self.live_server_url)
-    #             # Log into Adaptive Policy Sync Tool
-    #             if not loggedin:
-    #                 username_input = self.selenium.find_element_by_name("username")
-    #                 username_input.send_keys(sync._config.test_user["username"])
-    #                 password_input = self.selenium.find_element_by_name("password")
-    #                 password_input.send_keys(sync._config.test_user["password"])
-    #                 self.selenium.find_element_by_name("login").click()
-    #                 loggedin = True
-    #
-    #             # Setup Landing page; Click the Start button
-    #             self.selenium.find_element_by_name("start").click()
-    #
-    #             # ISE Setup page. Enter the ISE Server IP address, username and password. Then click Next
-    #             iseip_input = self.selenium.find_element_by_name("iseIP")
-    #             iseip_input.send_keys(ci["ip"])
-    #             iseusername_input = self.selenium.find_element_by_name("iseUser")
-    #             iseusername_input.send_keys(ci["user"])
-    #             isepassword_input = self.selenium.find_element_by_name("isePass")
-    #             isepassword_input.send_keys(ci["pass"])
-    #             self.selenium.find_element_by_name("nextbtn").click()
-    #
-    #             # Meraki Setup page. Enter the Meraki API Key, select the organization, then click Next
-    #             merakikey_input = self.selenium.find_element_by_name("apiKey")
-    #             merakikey_input.send_keys(sync._config.merakiapi["apikey"])
-    #             merakikey_input.send_keys(Keys.TAB)
-    #             time.sleep(3)
-    #             self.selenium.find_element_by_id("btnorg").click()
-    #             time.sleep(1)
-    #             element = self.selenium.find_element_by_id(sync._config.merakiapi["orgid"])
-    #             coordinates = element.location_once_scrolled_into_view
-    #             self.selenium.execute_script('window.scrollTo({}, {});'.format(coordinates['x'], coordinates['y']))
-    #             element.click()
-    #             self.selenium.find_element_by_name("nextbtn").click()
-    #
-    #             # Sync Setup page. Ensure configuration is set to source from ISE, then click Finish
-    #             if src == "ise":
-    #                 self.selenium.find_element_by_id("label_ise").click()
-    #             elif src == "meraki":
-    #                 self.selenium.find_element_by_id("label_meraki").click()
-    #             else:
-    #                 assert False
-    #             self.selenium.find_element_by_name("finishbtn").click()
-    #
-    #             # Manually sync environments
-    #             if src == "ise":
-    #                 msg, log = scripts.ise_monitor.sync_ise()
-    #                 msg, log = scripts.dashboard_monitor.sync_dashboard()
-    #             else:
-    #                 msg, log = scripts.dashboard_monitor.sync_dashboard()
-    #                 msg, log = scripts.ise_monitor.sync_ise()
-    #             self.selenium.refresh()
-    #
-    #             # Click Status on Sidebar
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-1").click()
-    #             # Click SGTs under Status on Sidebar
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-3-1").click()
-    #
-    #             # Check all of the SGTs that are in the sync_tags list in _config
-    #             tags = Tag.objects.all()
-    #             for t in tags:
-    #                 if t.tag_number in sync._config.sync_tags:
-    #                     checkid = "check-" + str(t.id)
-    #                     self.selenium.find_element_by_name(checkid).send_keys(Keys.SPACE)
-    #
-    #             # Click Save
-    #             element = self.selenium.find_element_by_id("savebtn")
-    #             coordinates = element.location_once_scrolled_into_view
-    #             self.selenium.execute_script('window.scrollTo({}, {});'.format(coordinates['x'], coordinates['y']))
-    #             element.click()
-    #
-    #             # Manually sync environments
-    #             if src == "ise":
-    #                 msg, log = scripts.ise_monitor.sync_ise()
-    #                 msg, log = scripts.dashboard_monitor.sync_dashboard()
-    #             else:
-    #                 msg, log = scripts.dashboard_monitor.sync_dashboard()
-    #                 msg, log = scripts.ise_monitor.sync_ise()
-    #             self.selenium.refresh()
-    #
-    #             # Click Status on Sidebar (already open; skip)
-    #             # print("Opening Status Menu")
-    #             # self.selenium.find_element_by_id("md-sidebar__nav-item-1-1").click()
-    #             # Click SGACLs under Status on Sidebar
-    #             print("Opening Status->SGACLs")
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-3-3").click()
-    #             # Click Policies under Status on Sidebar
-    #             print("Opening Status->Policies")
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-3-5").click()
-    #
-    #             # Click Configuration on Sidebar
-    #             print("Opening Configuration Menu")
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-4").click()
-    #             # Click ISE Certificates under Status on Sidebar
-    #             print("Opening Configuration->ISE Certificates")
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-6-1").click()
-    #             # Click ISE Server under Status on Sidebar
-    #             print("Opening Configuration->ISE Server")
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-6-3").click()
-    #             # Click Meraki Dashboard under Status on Sidebar
-    #             print("Opening Configuration->Meraki Dashboard")
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-6-5").click()
-    #             # Click Sync Config under Status on Sidebar
-    #             print("Opening Configuration->Sync")
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-6-7").click()
-    #
-    #             # Click Home on Sidebar
-    #             self.selenium.find_element_by_id("md-sidebar__nav-item-1-9").click()
-    #
-    #             msgt = self.selenium.find_element_by_id("meraki-sgt-ok").text
-    #             isgt = self.selenium.find_element_by_id("ise-sgt-ok").text
-    #             msgacl = self.selenium.find_element_by_id("meraki-sgacl-ok").text
-    #             isgacl = self.selenium.find_element_by_id("ise-sgacl-ok").text
-    #             mpol = self.selenium.find_element_by_id("meraki-policy-ok").text
-    #             ipol = self.selenium.find_element_by_id("ise-policy-ok").text
-    #             # print(msgt, isgt, msgacl, isgacl, mpol, ipol)
-    #
-    #             if int(msgt) + int(isgt) != len(sync._config.sync_tags):
-    #                 print("1 (FAIL) :", "Incorrect number of objects in DB")
-    #                 success = False
-    #             else:
-    #                 print("1 (SUCCESS) :", "Correct number of objects in DB")
-    #
-    #             if int(msgacl) + int(isgacl) != len(sync._config.expected_ise_sgacls):
-    #                 print("2 (FAIL) :", "Incorrect number of objects in DB")
-    #                 success = False
-    #             else:
-    #                 print("2 (SUCCESS) :", "Correct number of objects in DB")
-    #
-    #             if int(mpol) + int(ipol) != len(sync._config.expected_ise_policies):
-    #                 print("3 (FAIL) :", "Incorrect number of objects in DB")
-    #                 success = False
-    #             else:
-    #                 print("3 (SUCCESS) :", "Correct number of objects in DB")
-    #
-    #     assert success
-
-
-# @pytest.mark.parametrize('arg', ['setup_ise24_reset', 'setup_ise26_reset',
-#                                  'setup_ise27_reset', 'setup_ise30_reset'], indirect=True)
-# @pytest.mark.django_db
-# def test_web_ise_src(arg):
-#     adesc = arg["desc"].split(" ")
-#     aun = "ise_src_" + adesc[1].replace(".", "")
-#     time.sleep(5)
-#     my_admin = User.objects.create_superuser(aun, sync._config.test_user["email"],
-#                                              sync._config.test_user["password"])
-#     time.sleep(5)
-#     b = BrowserTests()
-#     b.setUpClass()
-#     ret = b.test_web_setup("ise", arg, aun)
-#     b.tearDownClass()
-#     assert ret
-#
-#
-# @pytest.mark.parametrize('arg', ['setup_ise24_reset', 'setup_ise26_reset',
-#                                  'setup_ise27_reset', 'setup_ise30_reset'], indirect=True)
-# @pytest.mark.django_db
-# def test_web_meraki_src(arg):
-#     adesc = arg["desc"].split(" ")
-#     aun = "meraki_src_" + adesc[1].replace(".", "")
-#     my_admin = User.objects.create_superuser(aun, sync._config.test_user["email"],
-#                                              sync._config.test_user["password"])
-#     b = BrowserTests()
-#     b.setUpClass()
-#     ret = b.test_web_setup("meraki", arg, aun)
-#     b.tearDownClass()
-#     assert ret
