@@ -5,7 +5,6 @@ from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from .forms import UploadForm
-import meraki
 from scripts.db_backup import backup
 from scripts.db_restore import restore
 import os
@@ -13,7 +12,6 @@ from pathlib import Path
 import meraki
 from meraki.exceptions import APIError
 from django.conf import settings
-import json
 
 
 def startresync(request):
