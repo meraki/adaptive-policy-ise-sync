@@ -9,8 +9,8 @@ import traceback
 
 def clean_sgts(src, sgts, is_base, sync_session, log=None, obj=None):
     append_log(log, "db_trustsec::clean_sgts::", len(sgts))
+    changed_objs = []
     try:
-        changed_objs = []
         active_id_list = []
         if src == "ise":
             for s in sgts:
@@ -57,12 +57,13 @@ def clean_sgts(src, sgts, is_base, sync_session, log=None, obj=None):
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::clean_sgts::Exception in clean_sgts: ", e)
+    return changed_objs
 
 
 def clean_sgacls(src, sgacls, is_base, sync_session, log=None, obj=None):
     append_log(log, "db_trustsec::clean_sgacls::", len(sgacls))
+    changed_objs = []
     try:
-        changed_objs = []
         active_id_list = []
         if src == "ise":
             for s in sgacls:
@@ -109,12 +110,13 @@ def clean_sgacls(src, sgacls, is_base, sync_session, log=None, obj=None):
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::clean_sgacls::Exception in clean_sgacls: ", e)
+    return changed_objs
 
 
 def clean_sgpolicies(src, sgpolicies, is_base, sync_session, log=None, obj=None):
     append_log(log, "db_trustsec::clean_sgpolicies::", len(sgpolicies))
+    changed_objs = []
     try:
-        changed_objs = []
         active_id_list = []
         if src == "ise":
             for s in sgpolicies:
@@ -161,13 +163,14 @@ def clean_sgpolicies(src, sgpolicies, is_base, sync_session, log=None, obj=None)
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::clean_sgpolicies::Exception in clean_sgpolicies: ", e)
+    return changed_objs
 
 
 def merge_sgts(src, sgts, is_base, sync_session, log=None, obj=None):
+    changed_objs = []
     try:
         iseservers = ISEServer.objects.all()
         organizations = Organization.objects.filter(dashboard__syncsession=sync_session)
-        changed_objs = []
         for s in sgts:
             tag_num = None
             if isinstance(s, dict):
@@ -197,6 +200,7 @@ def merge_sgts(src, sgts, is_base, sync_session, log=None, obj=None):
                             tag.name = s["name"]
                         tag.description = s["description"].replace("'", "").replace('"', "")
                         tag.save()
+                        changed_objs.append(tag)
                     else:
                         append_log(log, "db_trustsec::merge_sgts::sgt::" + src + "::", tag_num,
                                    "exists in database; not base, only add data...")
@@ -215,6 +219,7 @@ def merge_sgts(src, sgts, is_base, sync_session, log=None, obj=None):
                                                                            "origin_ise": obj,
                                                                            "syncsession": sync_session})
                 if created:
+                    changed_objs.append(tag)
                     append_log(log, "db_trustsec::merge_sgts::creating tag", tag_num, "...")
 
                 # Ensure that all Data objects exist in DB
@@ -234,11 +239,19 @@ def merge_sgts(src, sgts, is_base, sync_session, log=None, obj=None):
                         for o in organizations:
                             TagData.objects.get_or_create(tag=tag, organization=o)
                     elif src == "ise":
-                        TagData.objects.update_or_create(tag=tag, iseserver=obj,
-                                                         defaults={"source_id": s["id"],
-                                                                   "source_data": json.dumps(s),
-                                                                   "source_ver": s["generationId"],
-                                                                   "last_sync": make_aware(datetime.datetime.now())})
+                        if s.get("generationId"):
+                            TagData.objects.update_or_create(tag=tag, iseserver=obj,
+                                                             defaults={"source_id": s["id"],
+                                                                       "source_data": json.dumps(s),
+                                                                       "source_ver": s["generationId"],
+                                                                       "last_sync":
+                                                                           make_aware(datetime.datetime.now())})
+                        else:
+                            TagData.objects.update_or_create(tag=tag, iseserver=obj,
+                                                             defaults={"source_id": s["id"],
+                                                                       "source_data": json.dumps(s),
+                                                                       "last_sync":
+                                                                           make_aware(datetime.datetime.now())})
                         # Ensure TagData objects exist for all Meraki Orgs
                         for o in organizations:
                             TagData.objects.get_or_create(tag=tag, organization=o)
@@ -246,13 +259,14 @@ def merge_sgts(src, sgts, is_base, sync_session, log=None, obj=None):
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::merge_sgts::Exception in merge_sgts: ", e, traceback.format_exc())
+    return changed_objs
 
 
 def merge_sgacls(src, sgacls, is_base, sync_session, log=None, obj=None):
+    changed_objs = []
     try:
         iseservers = ISEServer.objects.all()
         organizations = Organization.objects.filter(dashboard__syncsession=sync_session)
-        changed_objs = []
         for s in sgacls:
             tag_name = s.get("name", "")
             if tag_name == "":
@@ -290,6 +304,7 @@ def merge_sgacls(src, sgacls, is_base, sync_session, log=None, obj=None):
 
                 if created:
                     append_log(log, "db_trustsec::merge_sgacls::creating acl", tag_name, "...")
+                    changed_objs.append(acl)
                 else:
                     if is_base:
                         append_log(log, "db_trustsec::merge_sgacls::sgacl::" + src + "::", tag_name,
@@ -297,10 +312,11 @@ def merge_sgacls(src, sgacls, is_base, sync_session, log=None, obj=None):
                         if acl.name != s["name"] and acl.cleaned_name() != s["name"]:
                             acl.name = s["name"]
                         acl.description = s["description"].replace("'", "").replace('"', "")
+                        changed_objs.append(acl)
+                        acl.save()
                     else:
                         append_log(log, "db_trustsec::merge_sgacls::sgacl::" + src + "::", tag_name,
                                    "exists in database; not base, only add data...")
-                acl.save()
 
                 if not acl.push_delete:
                     if src == "meraki":
@@ -327,13 +343,14 @@ def merge_sgacls(src, sgacls, is_base, sync_session, log=None, obj=None):
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::merge_sgacls::Exception in merge_sgacls: ", e, traceback.format_exc())
+        return changed_objs
 
 
 def merge_sgpolicies(src, sgpolicies, is_base, sync_session, log=None, obj=None):
+    changed_objs = []
     try:
         iseservers = ISEServer.objects.all()
         organizations = Organization.objects.filter(dashboard__syncsession=sync_session)
-        changed_objs = []
         for s in sgpolicies:
             src_grp = dst_grp = binding_id = binding_name = binding_desc = policy_name = policy_desc = None
             if src == "meraki":
@@ -379,6 +396,7 @@ def merge_sgpolicies(src, sgpolicies, is_base, sync_session, log=None, obj=None)
                                                                           "origin_ise": obj,
                                                                           "syncsession": sync_session})
                 if created:
+                    changed_objs.append(pol)
                     append_log(log, "db_trustsec::merge_policies::creating policy", policy_name, "...")
                     full_update = True
                 else:
@@ -409,6 +427,7 @@ def merge_sgpolicies(src, sgpolicies, is_base, sync_session, log=None, obj=None)
                         for a in acls:
                             acl_set.append(a.acl)
                         pol.acl.set(acl_set)
+                    changed_objs.append(pol)
                     pol.save()
 
                 if not pol.push_delete:
@@ -440,3 +459,4 @@ def merge_sgpolicies(src, sgpolicies, is_base, sync_session, log=None, obj=None)
         return changed_objs
     except Exception as e:    # pragma: no cover
         append_log(log, "db_trustsec::merge_sgpolicies::Exception in merge_sgpolicies: ", e, traceback.format_exc())
+    return changed_objs
