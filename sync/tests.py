@@ -837,13 +837,15 @@ def push_ise_updates():
                                       sync._config.update_ise_policy["default"],
                                       acls=sync._config.update_ise_policy["acls"],
                                       description=sync._config.update_ise_policy["description"])
+    # adding sleep for pxgrid test - pxgrid client doesn't seem to be able to catch to several events quickly
+    time.sleep(5)
     sgacl = ise.update_sgacl(upd_sgacl["id"], sync._config.update_ise_sgacl["name"],
                              sync._config.update_ise_sgacl["description"],
                              sync._config.update_ise_sgacl["version"], sync._config.update_ise_sgacl["aclcontent"])
+    # adding sleep for pxgrid test - pxgrid client doesn't seem to be able to catch to several events quickly
+    time.sleep(5)
     sgt = ise.update_sgt(upd_sgt["id"], sync._config.update_ise_sgt["name"], sync._config.update_ise_sgt["description"],
                          sync._config.update_ise_sgt["value"])
-
-    # print("#####Updates", emc, sgacl, sgt)
 
 
 def push_meraki_updates():
@@ -1251,7 +1253,7 @@ def test_delete_element_revert(arg):
     assert success
 
 
-class pxGrid(StaticLiveServerTestCase):
+class PXGridTests(StaticLiveServerTestCase):
     @classmethod
     def test_pxgrid_setup(self, src=None, ci=None, un=None):
         success = True
@@ -1319,36 +1321,39 @@ class pxGrid(StaticLiveServerTestCase):
             else:
                 push_meraki_updates()
 
+            print("Sleeping 5 seconds to allow results to finish...")
+            time.sleep(5)
             print("Checking results...")
             success = check_sync_results(sync._config.update_ise_sgt, sync._config.update_ise_sgacl,
                                          sync._config.update_ise_policy)
             print("Stopping Monitor")
             cron.remove_all_jobs()
-        assert success
+        # return success
+        return False
 
-    # def test_web_ise_24_i(self):
-    #     assert self.test_pxgrid_setup("ise", setup_ise24_reset(), "ise_src_24")
-    #
-    # def test_web_ise_26_i(self):
-    #     assert self.test_pxgrid_setup("ise", setup_ise26_reset(), "ise_src_26")
-    #
+    def test_web_ise_24_i(self):
+        assert self.test_pxgrid_setup("ise", setup_ise24_reset(), "ise_src_24")
+
+    def test_web_ise_26_i(self):
+        assert self.test_pxgrid_setup("ise", setup_ise26_reset(), "ise_src_26")
+
     def test_web_ise_27_i(self):
         assert self.test_pxgrid_setup("ise", setup_ise27_reset(), "ise_src_27")
 
-    # def test_web_ise_30_i(self):
-    #     assert self.test_pxgrid_setup("ise", setup_ise30_reset(), "ise_src_30")
-    #
-    # def test_web_ise_24_m(self):
-    #     assert self.test_pxgrid_setup("meraki", setup_ise24_reset(), "meraki_src_24")
-    #
-    # def test_web_ise_26_m(self):
-    #     assert self.test_pxgrid_setup("meraki", setup_ise26_reset(), "meraki_src_26")
-    #
-    # def test_web_ise_27_m(self):
-    #     assert self.test_pxgrid_setup("meraki", setup_ise27_reset(), "meraki_src_27")
-    #
-    # def test_web_ise_30_m(self):
-    #     assert self.test_pxgrid_setup("meraki", setup_ise30_reset(), "meraki_src_30")
+    def test_web_ise_30_i(self):
+        assert self.test_pxgrid_setup("ise", setup_ise30_reset(), "ise_src_30")
+
+    def test_web_ise_24_m(self):
+        assert self.test_pxgrid_setup("meraki", setup_ise24_reset(), "meraki_src_24")
+
+    def test_web_ise_26_m(self):
+        assert self.test_pxgrid_setup("meraki", setup_ise26_reset(), "meraki_src_26")
+
+    def test_web_ise_27_m(self):
+        assert self.test_pxgrid_setup("meraki", setup_ise27_reset(), "meraki_src_27")
+
+    def test_web_ise_30_m(self):
+        assert self.test_pxgrid_setup("meraki", setup_ise30_reset(), "meraki_src_30")
 
 
 class APITests(StaticLiveServerTestCase):
