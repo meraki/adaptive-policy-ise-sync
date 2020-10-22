@@ -833,19 +833,19 @@ def push_ise_updates():
         print("One or more elements missing during search", upd_sgt, upd_sgacl, upd_policy)
         assert False
 
-    emc = ise.update_egressmatrixcell(upd_policy["id"], upd_policy["sourceSgtId"], upd_policy["destinationSgtId"],
-                                      sync._config.update_ise_policy["default"],
-                                      acls=sync._config.update_ise_policy["acls"],
-                                      description=sync._config.update_ise_policy["description"])
+    ise.update_egressmatrixcell(upd_policy["id"], upd_policy["sourceSgtId"], upd_policy["destinationSgtId"],
+                                sync._config.update_ise_policy["default"],
+                                acls=sync._config.update_ise_policy["acls"],
+                                description=sync._config.update_ise_policy["description"])
     # adding sleep for pxgrid test - pxgrid client doesn't seem to be able to catch to several events quickly
     time.sleep(5)
-    sgacl = ise.update_sgacl(upd_sgacl["id"], sync._config.update_ise_sgacl["name"],
-                             sync._config.update_ise_sgacl["description"],
-                             sync._config.update_ise_sgacl["version"], sync._config.update_ise_sgacl["aclcontent"])
+    ise.update_sgacl(upd_sgacl["id"], sync._config.update_ise_sgacl["name"],
+                     sync._config.update_ise_sgacl["description"],
+                     sync._config.update_ise_sgacl["version"], sync._config.update_ise_sgacl["aclcontent"])
     # adding sleep for pxgrid test - pxgrid client doesn't seem to be able to catch to several events quickly
     time.sleep(5)
-    sgt = ise.update_sgt(upd_sgt["id"], sync._config.update_ise_sgt["name"], sync._config.update_ise_sgt["description"],
-                         sync._config.update_ise_sgt["value"])
+    ise.update_sgt(upd_sgt["id"], sync._config.update_ise_sgt["name"], sync._config.update_ise_sgt["description"],
+                   sync._config.update_ise_sgt["value"])
 
 
 def push_meraki_updates():
@@ -1328,8 +1328,7 @@ class PXGridTests(StaticLiveServerTestCase):
                                          sync._config.update_ise_policy)
             print("Stopping Monitor")
             cron.remove_all_jobs()
-        # return success
-        return False
+        return success
 
     def test_web_ise_24_i(self):
         assert self.test_pxgrid_setup("ise", setup_ise24_reset(), "ise_src_24")
@@ -1439,7 +1438,7 @@ class APITests(StaticLiveServerTestCase):
                 url = self.live_server_url + "/api/v0/tag/" + str(t.get("id", "")) + "/"
                 data = {"do_sync": True}
                 ret = requests.request("PATCH", url, json=data, headers=headers)
-                tag_json = ret.json()
+                # tag_json = ret.json()
 
         if src == "ise":
             push_ise_updates()
@@ -1681,4 +1680,3 @@ class BrowserTests(StaticLiveServerTestCase):
 
     def test_web_ise_30_m(self):
         assert self.test_web_setup("meraki", setup_ise30_reset(), "meraki_src_30")
-
