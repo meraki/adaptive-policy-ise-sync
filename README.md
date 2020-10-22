@@ -38,11 +38,27 @@
     - [Unit Tests](https://htmlpreview.github.io/?https://github.com/meraki/adaptive-policy-ise-sync/blob/master/pytest_report.html)
 2) Current Code Coverage:
     - [Test Coverage](https://htmlpreview.github.io/?https://github.com/meraki/adaptive-policy-ise-sync/blob/master/htmlcov/index.html)
-3) Key Test Coverage gaps:
-    - Test pxGrid
-    - Test API
-    - Multi-Org testing
-        
+3) Unit Test Summary:
+<pre>
+    - test_ise_dashboard_unable_to_sync_first   With ISE set to Authoritative Source, Dashboard should be unable to sync first
+    - test_ise_iseserver_can_sync               With ISE set to Authoritative Source, ISE should be able to sync first
+    - test_ise_dashboard_can_sync_next          With ISE set to Authoritative Source, Dashboard should be able to sync after ISE
+    - test_dashboard_ise_unable_to_sync_first   With Meraki Dashboard set to Authoritative Source, ISE should be unable to sync first
+    - test_dashboard_can_sync                   With Meraki Dashboard set to Authoritative Source, Dashboard should be able to sync first
+    - test_dashboard_ise_can_sync_next          With Meraki Dashboard set to Authoritative Source, ISE should be able to sync after Dashboard
+    - test_sgts_in_database                     Expected SGTs must have Dashboard and ISE IDs in the DB; Default SGTs must have ISE IDs in the DB
+    - test_sgacls_in_database                   Expected SGACLs must have ISE IDs in the DB; Default SGACLs must have ISE IDs in the DB
+    - test_policies_in_database                 Expected Policies must have ISE IDs in the DB; Default Policies must have ISE IDs in the DB
+    - test_ise_sync_success                     Perform a full sync and ensure SGTs, SGACLs and Policies have synced correctly
+    - test_update_element_success               Perform a full sync and then update each side for SGT, SGACL and Policy - change should replicate correctly
+    - test_update_element_revert                Perform a full sync and then update wrong side for SGT, SGACL and Policy - change should get reverted
+    - test_delete_element_success               Perform a full sync and then delete SGT, SGACL and Policy from each side - delete should replicate correctly
+    - test_delete_element_revert                Perform a full sync and then delete SGT, SGACL and Policy from each non-auth side - delete should get reverted
+    - PXGridTests                               Configure environment and sync, set SGTs to sync, sync again. Perform updates to SGT/SGACL/EgressPolicy, verify changes propegate via pxGri.
+    - APITests                                  Configure environment via API and sync, then set SGTs to sync via API. Verify changes replicate correctly. Test multiple Dashboard Orgs when ISE is auth source.
+    - BrowserTests                              Configure environment via AdP Sync Setup process and sync, then set SGTs to sync via UI. Verify changes replicate correctly.
+</pre> 
+       
 ### Set up your environment
 
 #### Meraki Dashboard<a name="configure-dashboard"/> ([^ Top](#top))
