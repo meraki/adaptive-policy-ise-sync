@@ -1,7 +1,6 @@
 import json
-from scripts.dblog import append_log, db_log
 from asgiref.sync import sync_to_async
-from sync.models import ISEServer, SyncSession
+from sync.models import SyncSession
 from scripts.meraki_addons import meraki_read_sgt, meraki_read_sgacl, meraki_update_sgt, \
     meraki_create_sgt, meraki_update_sgacl, meraki_create_sgacl, meraki_delete_sgt, \
     meraki_delete_sgacl, meraki_read_sgpolicy, meraki_update_sgpolicy
@@ -11,7 +10,6 @@ import meraki
 from django.conf import settings
 from sync.models import Tag, TagData, ACL, ACLData, Policy, PolicyData
 from ise import ERS
-from django.forms.models import model_to_dict
 
 
 @sync_to_async
@@ -316,11 +314,11 @@ def process_emc_update(msg, sa):
             policy.save()
 
         # Regardless of source, we will update the data that is specific to ISE
-        policydata = PolicyData.objects.update_or_create(policy=policy, iseserver=sa.iseserver,
-                                                         defaults={"source_id": iseemc["id"],
-                                                                   "source_data": json.dumps(iseemc),
-                                                                   "last_sync":
-                                                                       make_aware(datetime.datetime.now())})
+        PolicyData.objects.update_or_create(policy=policy, iseserver=sa.iseserver,
+                                            defaults={"source_id": iseemc["id"],
+                                                      "source_data": json.dumps(iseemc),
+                                                      "last_sync":
+                                                          make_aware(datetime.datetime.now())})
 
         # Now, if the policy is set to sync, we need to push the create/update to Dashboard - which may be one or
         #  more organizations
