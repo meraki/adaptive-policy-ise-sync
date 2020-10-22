@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class WebSocketStomp:
     def __init__(self, ws_url, user, password, ssl_ctx):
         self.ws_url = ws_url
