@@ -1,5 +1,4 @@
 import asyncio
-from asyncio.tasks import FIRST_COMPLETED
 from .pxgrid import PxgridControl
 from .config import Config
 import json
@@ -7,7 +6,6 @@ import sys
 import time
 import logging
 import threading
-import textwrap
 import hashlib
 from websockets import ConnectionClosed
 from .ws_stomp import WebSocketStomp
@@ -80,7 +78,7 @@ async def default_subscription_loop(config, secret, ws_url, topic, pubsub_node_n
             elif "acl" in message:
                 await process_sgacl_update(message, await get_sync_account(config.config_id))
 
-    except asyncio.CancelledError as e:
+    except asyncio.CancelledError:
         pass
     logger.debug('shutting down listener...')
     await ws.stomp_disconnect('123')
@@ -133,7 +131,7 @@ async def session_dedup_loop(config, secret, ws_url, topic, pubsub_node_name):
                         print('{}\nevent from {}'.format('-' * 75, ws_url))
                         print(json.dumps(s, indent=2, sort_keys=True))
             sys.stdout.flush()
-    except asyncio.CancelledError as e:
+    except asyncio.CancelledError:
         pass
     logger.debug('shutting down listener...')
     await ws.stomp_disconnect('123')
@@ -147,7 +145,7 @@ async def run_subscribe_all(task_list):
     if len(task_list) > 0:
         try:
             return await asyncio.gather(*task_list)
-        except asyncio.CancelledError as e:
+        except asyncio.CancelledError:
             for t in task_list:
                 t.cancel()
             return await asyncio.gather(*task_list)
@@ -271,7 +269,7 @@ def run(external_loop=None):
         topic_list = config.topic.split(",")
         for topic_item in topic_list:
             topic.append(service['properties'][topic_item])
-    except KeyError as e:
+    except KeyError:
         logger.debug('invald topic %s', config.topic)
         possible_topics = [k for k in service['properties'].keys() if
                            k != 'wsPubsubService' and k != 'restBaseUrl' and k != 'restBaseURL']
@@ -330,7 +328,7 @@ def run(external_loop=None):
             loop.add_signal_handler(SIGINT, run_all_task.cancel)
             loop.add_signal_handler(SIGTERM, run_all_task.cancel)
             loop.run_until_complete(run_all_task)
-        except:
+        except Exception:
             pass
 
 
