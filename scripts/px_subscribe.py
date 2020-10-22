@@ -12,7 +12,8 @@ import hashlib
 from websockets import ConnectionClosed
 from .ws_stomp import WebSocketStomp
 from signal import SIGINT, SIGTERM
-from .pxgrid_update import process_sgt_update, process_sgacl_update, get_sync_account
+from .pxgrid_update import process_sgt_update, process_sgacl_update, process_emc_update, get_sync_account
+import traceback
 
 #
 # the global logger
@@ -75,6 +76,7 @@ async def default_subscription_loop(config, secret, ws_url, topic, pubsub_node_n
             sys.stdout.flush()
             if "securityGroup" in message:
                 await process_sgt_update(message, await get_sync_account(config.config_id))
+                await process_emc_update(message, await get_sync_account(config.config_id))
             elif "acl" in message:
                 await process_sgacl_update(message, await get_sync_account(config.config_id))
 
@@ -298,12 +300,12 @@ def run(external_loop=None):
         else:
             loop = asyncio.get_event_loop()
             main_task = asyncio.ensure_future(subscription_loop(config, secret, ws_url, topic, pubsub_node_name))
-        loop.add_signal_handler(SIGINT, main_task.cancel)
-        loop.add_signal_handler(SIGTERM, main_task.cancel)
+            loop.add_signal_handler(SIGINT, main_task.cancel)
+            loop.add_signal_handler(SIGTERM, main_task.cancel)
         try:
             loop.run_until_complete(main_task)
-        except:
-            pass
+        except Exception:  # pragma: no cover
+            print(traceback.format_exc())
 
     else:
 
@@ -344,9 +346,12 @@ def job(scheduler=None):
         th.start()
         ret = run(loop)
         if ret is not False and scheduler:
-            scheduler.remove_job("pxgrid_monitor")
+            pxgrid_job = scheduler.get_job("pxgrid_monitor")
+            if pxgrid_job:
+                pxgrid_job.remove()
             print("pxGrid Monitor started")
         else:
             print("pxGrid configuration not present. Will check again...")
     except Exception as e:
         print("#### Exception starting scheduled job: sync_pxgrid", e)
+        print(traceback.format_exc())
