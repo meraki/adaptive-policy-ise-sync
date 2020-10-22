@@ -689,15 +689,13 @@ class ERS(object):
         else:
             return ERS._pass_ersresponse(result, resp)
 
-    def get_egressmatrixcells(self, detail=False, size=20, page=1):
+    def get_egressmatrixcells(self, detail=False, size=20, page=1, filter=None):
         """
         Get all TrustSec Egress Matrix Cells.
 
         :param detail: recursively retrieve all data for all egress cells in list (rather than just summary data)
         :return: result dictionary
         """
-
-        filter = None
 
         if detail:
             out_objs = []
