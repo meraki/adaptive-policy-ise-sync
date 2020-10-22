@@ -1,10 +1,8 @@
-import argparse
 import ssl
-import warnings
 from sync.models import ISEServer
 import json
 from types import SimpleNamespace as Namespace
-from scripts.dblog import append_log, db_log
+from scripts.dblog import append_log
 
 
 class Config:
@@ -149,7 +147,7 @@ class Config:
 
     @property
     def ssl_context(self):
-        if self.__ssl_context == None:
+        if self.__ssl_context is None:
             # self.__ssl_context = ssl.create_default_context()
             self.__ssl_context = ssl._create_unverified_context()
             if self.config.clientcert is not None:
