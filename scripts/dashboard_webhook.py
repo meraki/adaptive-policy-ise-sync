@@ -1,6 +1,4 @@
 from apscheduler.schedulers.background import BackgroundScheduler
-from django_apscheduler.jobstores import DjangoJobStore
-from django_apscheduler.jobstores import register_events
 
 # import threading
 # import asyncio
@@ -11,7 +9,7 @@ import meraki
 from scripts.dblog import append_log, db_log
 
 scheduler = BackgroundScheduler()
-scheduler.add_jobstore(DjangoJobStore(), "default")
+# scheduler.add_jobstore(DjangoJobStore(), "default")
 # loop = asyncio.new_event_loop()
 
 
@@ -89,5 +87,5 @@ def job():
         db_log("dashboard_webhook", log)
 
 
-register_events(scheduler)
-scheduler.start()
+# register_events(scheduler)
+# scheduler.start()
