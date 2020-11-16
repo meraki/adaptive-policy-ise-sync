@@ -11,11 +11,11 @@ cron = BackgroundScheduler()
 
 def run():     # pragma: no cover
     cron.remove_all_jobs()
-    cron.add_job(scripts.dashboard_monitor.sync_dashboard, 'interval', id="dashboard_monitor", seconds=10)
-    cron.add_job(scripts.ise_monitor.sync_ise, 'interval', id="ise_monitor", seconds=10)
+    cron.add_job(scripts.dashboard_monitor.sync_dashboard, 'interval', id="dashboard_monitor", seconds=30)
+    cron.add_job(scripts.ise_monitor.sync_ise, 'interval', id="ise_monitor", seconds=30)
     cron.add_job(scripts.db_backup.backup, 'interval', id="db_backup", hours=24)
-    cron.add_job(scripts.px_subscribe.job, 'interval', id="pxgrid_monitor", kwargs={"scheduler": cron}, seconds=60)
-    # cron.add_job(scripts.px_subscribe.job, id="pxgrid_monitor", kwargs={"scheduler": cron})
+    # cron.add_job(scripts.px_subscribe.task, 'interval', id="pxgrid_monitor", kwargs={"scheduler": cron}, seconds=60)
+    cron.add_job(scripts.px_subscribe.task, id="pxgrid_monitor")
 
     cron.start()
     atexit.register(lambda: cron.shutdown(wait=False))
