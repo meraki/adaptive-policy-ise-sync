@@ -883,18 +883,18 @@ def push_meraki_updates():
             src_sgt_id = s["groupId"]
         if s["name"] == sync._config.update_ise_policy["dst"]:
             dst_sgt_id = s["groupId"]
-        # print("``````", src_sgt_id, dst_sgt_id, s["name"], sync._config.update_meraki_policy["src"], sync._config.update_meraki_policy["dst"])
+        # print("``````", src_sgt_id, dst_sgt_id, s["name"], sync._config.update_ise_policy["src"], sync._config.update_ise_policy["dst"])
     acl_id_list = []
     for acl in sync._config.update_ise_policy["acls"]:
         for a in sgacl_list:
             if a["name"] == acl:
                 acl_id_list.append(a["aclId"])
     # Update!
-    meraki_update_sgpolicy(dashboard, org.orgid, name=sync._config.update_ise_policy["name"],
-                           description=sync._config.update_ise_policy["description"], srcGroupId=src_sgt_id,
-                           dstGroupId=dst_sgt_id, aclIds=acl_id_list if len(acl_id_list) > 0 else None,
-                           catchAllRule=sync._config.update_ise_policy["default_meraki"], bindingEnabled=True,
-                           monitorModeEnabled=False)
+    sgp = meraki_update_sgpolicy(dashboard, org.orgid, name=sync._config.update_ise_policy["name"],
+                                 description=sync._config.update_ise_policy["description"], srcGroupId=src_sgt_id,
+                                 dstGroupId=dst_sgt_id, aclIds=acl_id_list if len(acl_id_list) > 0 else None,
+                                 catchAllRule=sync._config.update_ise_policy["default_meraki"], bindingEnabled=True,
+                                 monitorModeEnabled=False)
 
     acl = meraki_update_sgacl(dashboard, org.orgid, update_sgacl_id, name=sync._config.update_ise_sgacl["name"],
                               description=sync._config.update_ise_sgacl["description"],
@@ -1458,7 +1458,7 @@ class APITests(StaticLiveServerTestCase):
         data = {"description": "Sync Session",
                 "dashboard": dashboard_json.get("id"),
                 "iseserver": ise_json.get("id"),
-                "ise_source": True,
+                "ise_source": True if src == "ise" else False,
                 "sync_enabled": True,
                 "apply_changes": True,
                 "sync_interval": 300}
@@ -1484,8 +1484,12 @@ class APITests(StaticLiveServerTestCase):
                 # tag_json = ret.json()
 
         if src == "ise":
+            msg, log = scripts.ise_monitor.sync_ise()
+            msg, log = scripts.dashboard_monitor.sync_dashboard()
             push_ise_updates()
         else:
+            msg, log = scripts.dashboard_monitor.sync_dashboard()
+            msg, log = scripts.ise_monitor.sync_ise()
             push_meraki_updates()
 
         url = self.live_server_url + "/api/v0/syncsession/" + ss_json.get("id", "") + "/"
