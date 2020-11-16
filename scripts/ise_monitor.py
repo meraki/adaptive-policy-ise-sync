@@ -43,6 +43,7 @@ def ingest_ise_data(accounts, log):
         a.last_sync = dt
         a.last_update = dt
         a.skip_sync = True
+        a.skip_update = True
         a.save()
 
 
@@ -310,6 +311,8 @@ def sync_ise():
     for ss in sss:
         digest_database_data(ss, log)
         ss.iseserver.force_rebuild = True
+        ss.iseserver.skip_update = True
+        ss.iseserver.save()
         ss.save()
         msg = "SYNC_ISE-CHANGES_MADE_FORCE_UPDATE"
 
@@ -348,6 +351,7 @@ def sync_ise():
                     append_log(log, "ise_monitor::sync_ise::Dashboard Force Rebuild", d)
                     msg = "SYNC_ISE-ISE_FORCE_REBUILD"
                     d.iseserver.force_rebuild = False
+                    d.iseserver.skip_update = True
                     d.iseserver.save()
                 if d.iseserver.last_sync and (d.iseserver.last_sync != d.iseserver.last_update):
                     append_log(log, "ise_monitor::sync_ise::Database Config / Sync Timestamp Mismatch", d)
