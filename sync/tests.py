@@ -906,6 +906,9 @@ def push_meraki_updates():
     # Tag.objects.filter(name=sync._config.update_ise_sgt["search"]).update(meraki_id=sgt["groupId"], meraki_data=sgt)
     TagData.objects.exclude(organization=None).filter(tag__name=sync._config.update_ise_sgt["search"]). \
         update(source_id=sgt["groupId"], source_data=sgt)
+    print(sgp)
+    print(acl)
+    print(sgt)
 
 
 def check_sync_results(d_sgt, d_acl, d_policy, expected_failures=[]):
