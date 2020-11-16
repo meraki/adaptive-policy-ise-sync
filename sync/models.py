@@ -252,6 +252,8 @@ class Dashboard(models.Model):
     force_rebuild = models.BooleanField("Force Dashboard Sync", default=False, editable=True)
     last_update = models.DateTimeField(default=django.utils.timezone.now)
     last_sync = models.DateTimeField(null=True, default=None, blank=True)
+    webhook_reset = models.BooleanField(default=True, editable=True)
+    skip_update = models.BooleanField(default=False)
 
     def __str__(self):
         return self.description
@@ -264,6 +266,13 @@ def post_save_dashboard(sender, instance=None, created=False, **kwargs):
         Organization.objects.filter(dashboard=instance).update(force_rebuild=True)
         instance.force_rebuild = False
         instance.save()
+    if instance:
+        if instance.skip_update:
+            instance.skip_update = False
+        else:
+            instance.webhook_reset = True
+        instance.save()
+
     post_save.connect(post_save_dashboard, sender=Dashboard)
 
 
@@ -290,6 +299,8 @@ class ISEServer(models.Model):
                                     verbose_name="pxGrid Client Key Password")
     pxgrid_isecert = models.ForeignKey(Upload, on_delete=models.SET_NULL, null=True, blank=True,
                                        verbose_name="pxGrid Server Cert (.cer)", related_name='pxgrid_isecert')
+    pxgrid_reset = models.BooleanField(default=True, editable=True)
+    skip_update = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "ISE Server"
@@ -309,6 +320,17 @@ class ISEServer(models.Model):
             return url
         else:
             return url + ":9060"
+
+
+@receiver(post_save, sender=ISEServer)
+def post_save_iseserver(sender, instance=None, created=False, **kwargs):
+    post_save.disconnect(post_save_iseserver, sender=ISEServer)
+    if instance.skip_update:
+        instance.skip_update = False
+    else:
+        instance.pxgrid_reset = True
+    instance.save()
+    post_save.connect(post_save_iseserver, sender=ISEServer)
 
 
 class ISEMatrix(models.Model):
