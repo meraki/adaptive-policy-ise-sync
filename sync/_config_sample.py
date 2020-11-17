@@ -1,6 +1,16 @@
 merakiapi = {
     "apikey": "<meraki-api-key-goes-here>",
-    "orgid": "1234567890"
+    "testorg1_id": "1234567890",
+    "testorg2_id": "0987654321",
+    "testorg1_name": "AdP Testing 1",
+    "testorg2_name": "AdP Testing 2"
+}
+
+test_user = {
+    "username": "unittests",
+    "email": "unittests@test.com",
+    "password": "P@ssw0rd",
+    "apikey": "1234567890abcdefghijklmnopqrstuvwxyz1234"
 }
 
 whitelisted_sgts = [0, 2]

@@ -12,6 +12,39 @@ from rest_framework import authentication
 import re
 import string
 from django.db.models import Q
+from django.utils.html import format_html
+import traceback
+
+
+def chk_list(lst, exp=None, cst_match=None):
+    if cst_match:
+        lfind = lst[0]
+        lst_comp = [lfind]
+        for c in cst_match:
+            if lfind in c:
+                lst_comp = c
+                break
+        for litem in lst:
+            if litem not in lst_comp:
+                return False
+        return True
+    elif exp:
+        return len(set(lst)) == 1 and lst[0] == exp
+    else:
+        return len(set(lst)) == 1
+
+
+def htmlprep(json_obj):
+    txt = json.dumps(json_obj)
+    txt = txt.replace("{", "&#123;").replace("}", "&#125;").replace('"', "&quot;")
+    return txt
+
+
+def json_try_load(strdata, default=None):
+    try:
+        return json.loads(strdata)
+    except Exception:
+        return default
 
 
 class BearerAuthentication(authentication.TokenAuthentication):
@@ -67,7 +100,7 @@ def post_save_uploadzip(sender, instance=None, created=False, **kwargs):
                 continue
             fn = "upload/" + libitem
             open(fn, 'wb').write(unzipped.read(libitem))
-            i = Upload.objects.create(description=instance.description + "-" + fn, file=fn)
+            i = Upload.objects.create(description=instance.description + "-" + fn, file=fn, uploadzip=instance)
             i.save()
 
     post_save.connect(post_save_uploadzip, sender=UploadZip)
@@ -108,9 +141,9 @@ def auto_delete_uploadzip_on_change(sender, instance, **kwargs):
 class Upload(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     description = models.CharField(max_length=255, blank=True)
-    # file = models.BinaryField(editable=False)
     file = models.FileField(upload_to='upload')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploadzip = models.ForeignKey(UploadZip, on_delete=models.CASCADE, null=True, default=None)
 
     def __str__(self):
         return self.description
@@ -179,19 +212,9 @@ def auto_delete_upload_on_change(sender, instance, **kwargs):
             os.remove(old_file.path)
 
 
-class Dashboard(models.Model):
+class Organization(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    description = models.CharField("Dashboard Integration Description", max_length=100, blank=False, null=False)
-    baseurl = models.CharField("Base URL", max_length=64, null=False, blank=False,
-                               default="https://api.meraki.com/api/v1")
-    apikey = models.CharField("API Key", max_length=64, null=False, blank=False)
     orgid = models.CharField("API Organization ID", max_length=32, null=True, blank=True, default=None)
-    # netid = models.CharField(max_length=32, null=True, blank=True, default=None)
-    # username = models.CharField(max_length=64, null=True, blank=True, default=None)
-    # password = models.CharField(max_length=64, null=True, blank=True, default=None)
-    webhook_enable = models.BooleanField(default=False, editable=True)
-    webhook_ngrok = models.BooleanField(default=False, editable=True)
-    webhook_url = models.CharField(max_length=200, null=True, blank=True, default=None)
     raw_data = models.TextField(blank=True, null=True, default=None)
     force_rebuild = models.BooleanField("Force Dashboard Sync", default=False, editable=True)
     skip_sync = models.BooleanField(default=False, editable=False)
@@ -199,16 +222,58 @@ class Dashboard(models.Model):
     last_sync = models.DateTimeField(null=True, default=None, blank=True)
 
     def __str__(self):
+        dbs = self.dashboard_set.all()
+        if len(dbs) == 1:
+            return dbs[0].description + " (" + self.orgid + ")"
+        return self.orgid
+
+
+@receiver(post_save, sender=Organization)
+def post_save_organization(sender, instance=None, created=False, **kwargs):
+    post_save.disconnect(post_save_organization, sender=Organization)
+    if instance and instance.force_rebuild:
+        TagData.objects.filter(organization=instance).update(update_failed=False)
+        ACLData.objects.filter(organization=instance).update(update_failed=False)
+        PolicyData.objects.filter(organization=instance).update(update_failed=False)
+    post_save.connect(post_save_organization, sender=Organization)
+
+
+class Dashboard(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    description = models.CharField("Dashboard Integration Description", max_length=100, blank=False, null=False)
+    baseurl = models.CharField("Base URL", max_length=64, null=False, blank=False,
+                               default="https://api.meraki.com/api/v1")
+    apikey = models.CharField("API Key", max_length=64, null=False, blank=False)
+    webhook_enable = models.BooleanField(default=False, editable=True)
+    webhook_ngrok = models.BooleanField(default=False, editable=True)
+    webhook_url = models.CharField(max_length=200, null=True, blank=True, default=None)
+    raw_data = models.JSONField(blank=True, null=True, default=None)
+    organization = models.ManyToManyField(Organization, blank=True)
+    force_rebuild = models.BooleanField("Force Dashboard Sync", default=False, editable=True)
+    last_update = models.DateTimeField(default=django.utils.timezone.now)
+    last_sync = models.DateTimeField(null=True, default=None, blank=True)
+    webhook_reset = models.BooleanField(default=True, editable=True)
+    skip_update = models.BooleanField(default=False)
+
+    def __str__(self):
         return self.description
 
 
-# @receiver(post_save, sender=Dashboard)
-# def post_save_dashboard(sender, instance=None, created=False, **kwargs):
-#     post_save.disconnect(post_save_dashboard, sender=Dashboard)
-#     if instance.webhook_ngrok:
-#
-#         instance.save()
-#     post_save.connect(post_save_dashboard, sender=Dashboard)
+@receiver(post_save, sender=Dashboard)
+def post_save_dashboard(sender, instance=None, created=False, **kwargs):
+    post_save.disconnect(post_save_dashboard, sender=Dashboard)
+    if instance.force_rebuild:
+        Organization.objects.filter(dashboard=instance).update(force_rebuild=True)
+        instance.force_rebuild = False
+        instance.save()
+    if instance:
+        if instance.skip_update:
+            instance.skip_update = False
+        else:
+            instance.webhook_reset = True
+        instance.save()
+
+    post_save.connect(post_save_dashboard, sender=Dashboard)
 
 
 class ISEServer(models.Model):
@@ -234,12 +299,16 @@ class ISEServer(models.Model):
                                     verbose_name="pxGrid Client Key Password")
     pxgrid_isecert = models.ForeignKey(Upload, on_delete=models.SET_NULL, null=True, blank=True,
                                        verbose_name="pxGrid Server Cert (.cer)", related_name='pxgrid_isecert')
+    pxgrid_reset = models.BooleanField(default=True, editable=True)
+    skip_update = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "ISE Server"
         verbose_name_plural = "ISE Servers"
 
     def __str__(self):
+        if self.ipaddress:
+            return self.description + " (" + self.ipaddress + ")"
         return self.description
 
     def base_url(self):
@@ -251,6 +320,17 @@ class ISEServer(models.Model):
             return url
         else:
             return url + ":9060"
+
+
+@receiver(post_save, sender=ISEServer)
+def post_save_iseserver(sender, instance=None, created=False, **kwargs):
+    post_save.disconnect(post_save_iseserver, sender=ISEServer)
+    if instance.skip_update:
+        instance.skip_update = False
+    else:
+        instance.pxgrid_reset = True
+    instance.save()
+    post_save.connect(post_save_iseserver, sender=ISEServer)
 
 
 class ISEMatrix(models.Model):
@@ -267,7 +347,6 @@ class SyncSession(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     description = models.CharField("Sync Description", max_length=100, blank=False, null=False)
     dashboard = models.ForeignKey(Dashboard, on_delete=models.SET_NULL, null=True, blank=True)
-    # isematrix = models.ForeignKey(ISEMatrix, on_delete=models.SET_NULL, null=True, blank=True)
     iseserver = models.ForeignKey(ISEServer, on_delete=models.SET_NULL, null=True, blank=True,
                                   verbose_name="ISE Server")
     ise_source = models.BooleanField("Make ISE Config Base", default=True, editable=True)
@@ -297,37 +376,117 @@ def post_save_syncsession(sender, instance=None, created=False, **kwargs):
 class Tag(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Tag Name", max_length=50, blank=False, null=False)
-    description = models.CharField("Tag Description", max_length=100, blank=True, null=False)
+    description = models.CharField("Tag Description", max_length=200, blank=True, null=False)
     do_sync = models.BooleanField("Sync this Tag?", default=False, editable=True)
     syncsession = models.ForeignKey(SyncSession, on_delete=models.SET_NULL, null=True, blank=True)
     tag_number = models.IntegerField(blank=False, null=False, default=0)
-    meraki_id = models.CharField(max_length=36, blank=True, null=True, default=None)
-    ise_id = models.CharField("ISE id", max_length=36, blank=True, null=True, default=None)
-    meraki_data = models.TextField(blank=True, null=True, default=None)
-    ise_data = models.TextField("ISE data", blank=True, null=True, default=None)
-    meraki_ver = models.IntegerField(blank=True, null=True, default=None)
-    ise_ver = models.IntegerField(blank=True, null=True, default=None)
-    needs_update = models.TextField(blank=True, null=True, default=None)
-    update_failed = models.BooleanField(default=False, editable=False)
-    last_update = models.DateTimeField(default=django.utils.timezone.now)
-    last_update_data = models.TextField(blank=True, null=True, default=None)
-    last_update_state = models.CharField(max_length=20, blank=True, null=True, default=None)
+    origin_ise = models.ForeignKey(ISEServer, on_delete=models.SET_NULL, null=True, blank=True)
+    origin_org = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True)
     push_delete = models.BooleanField(default=False, editable=False)
-    sourced_from = models.CharField(max_length=20, blank=True, null=True, default=None)
+
+    class Meta:
+        ordering = ('tag_number',)
 
     def __str__(self):
-        if self.do_sync:
-            return self.name + " (" + str(self.tag_number) + ")"    # + " -- Matches:" + str(self.in_sync())
-        else:
-            return self.name + " (" + str(self.tag_number) + ")"
+        return self.name + " (" + str(self.tag_number) + ")"
+
+    def get_objects(self):
+        return self.tagdata_set.all()
+
+    def last_update(self):
+        objs = self.get_objects()
+        lu = None
+        for o in objs:
+            if o.last_update or (lu and o.last_update and o.last_update > lu):
+                lu = o.last_update
+
+        if not lu:
+            return "Never"
+        return lu
+
+    def objects_desc(self):
+        out = []
+        for d in self.get_objects():
+            out.append(str(d))
+
+        return "\n".join(out)
 
     def update_success(self):
-        if self.last_update_state == "True" and not self.update_failed:
+        if self.do_sync:
+            if not self.objects_in_sync():
+                return False
+
             return True
-        elif self.last_update_state == "False" or self.update_failed:
-            return False
 
         return None
+
+    def objects_in_sync(self):
+        return self.objects_match(bool_only=True)
+
+    def object_update_target(self):
+        return self.objects_match(get_target=True)
+
+    def objects_match(self, bool_only=False, get_target=None):
+        full_match = True
+        header = ["Source", "Name", "Cleaned Name", "Description", "Fuzzy Description", "Pending Delete"]
+        combined_vals = {}
+        f = [""] * len(header)
+        expected_vals = [""] * len(header)
+        match_required = [True] * len(header)
+        for hnum in range(0, len(header)):
+            combined_vals[str(hnum)] = []
+        out = "<table><tr><th>" + "</th><th>".join(header) + "</th></tr>"
+        for o in self.get_objects():
+            try:
+                if not o.source_data:
+                    jo = {}
+                else:
+                    jo = json_try_load(o.source_data, {})
+                a0 = o.hyperlink()
+                a1 = jo.get("name", "UNKNOWN")
+                a2 = re.sub('[^0-9a-zA-Z]+', '_', jo.get("name", "UNKNOWN")[:32])
+                a3 = jo.get("description", "UNKNOWN")
+                a4 = jo.get("description", "UNKNOWN").translate(str.maketrans('', '', string.punctuation)).lower()
+                a5 = str(o.tag.push_delete)
+
+                f = [a0, a1, a2, a3, a4, a5]
+                expected_vals = [None, None, None, None, None, "False"]
+                match_required = [False, False, True, False, True, True]
+                for x in range(1, len(header)):
+                    combined_vals[str(x)].append(f[x])
+            except Exception as e:
+                print("exception", e)
+                jo = {}
+            out += "<tr><td>" + "</td><td>".join(f) + "</td></tr>"
+
+        out += "<tr><td><i>Matches?</i></td>"
+        for x in range(1, len(header)):
+            matches = chk_list(combined_vals[str(x)], expected_vals[x])
+            if not matches and match_required[x]:
+                full_match = False
+            out += "<td>" + str(matches) + "</td>"
+        out += "</tr></table>"
+
+        if self.tag_number == 0:
+            out += "<hr><b><u>NOTE:THIS TAG (0) WILL ALWAYS RETURN matches=True. WE DO NOT WANT TO SYNC IT.</b></u>"
+            if bool_only:
+                return True
+        elif self.tag_number == 2:
+            out += "<hr><b><u>NOTE:THIS TAG (2) WILL ALWAYS RETURN matches=True. WE DO NOT WANT TO SYNC IT.</b></u>"
+            if bool_only:
+                return True
+
+        if get_target:
+            if not full_match:
+                if self.origin_ise:
+                    return "meraki"
+                else:
+                    return "ise"
+            return None
+        elif bool_only:
+            return full_match
+        else:
+            return format_html(out)
 
     def cleaned_name(self):
         newname = self.name[:32]
@@ -335,102 +494,7 @@ class Tag(models.Model):
         return newname
 
     def in_sync(self):
-        return self.match_report(bool_only=True)
-
-    def match_report(self, bool_only=False):
-        outtxt = ""
-        if self.ise_id and self.ise_data and self.meraki_id and self.meraki_data:
-            mdata = json.loads(self.meraki_data)
-            idata = json.loads(self.ise_data)
-
-            name_match = mdata.get("name", "mdata") == idata.get("name", "idata")
-            name_match_cl = self.cleaned_name() == idata.get("name", "idata")
-            m_desc = mdata.get("description", "mdata")
-            i_desc = idata.get("description", "idata")
-            desc_match = m_desc == i_desc
-            m_desc = m_desc.translate(str.maketrans('', '', string.punctuation)).lower()
-            i_desc = i_desc.translate(str.maketrans('', '', string.punctuation)).lower()
-            desc_match_fuzzy = m_desc == i_desc
-
-            outtxt += "name:" + str(name_match) + "\n"
-            outtxt += "cleaned name:" + str(name_match_cl) + "\n"
-            outtxt += "description:" + str(desc_match) + "\n"
-            outtxt += "fuzzy description:" + str(desc_match_fuzzy) + "\n"
-            if self.tag_number == 0:
-                outtxt += "\n" + "NOTE:THIS TAG (0) WILL ALWAYS RETURN Matches:True. WE DO NOT WANT TO SYNC IT." + "\n"
-                if bool_only:
-                    return True
-            elif self.tag_number == 2:
-                outtxt += "\n" + "NOTE:THIS TAG (2) WILL ALWAYS RETURN Matches:True. WE DO NOT WANT TO SYNC IT." + "\n"
-                if bool_only:
-                    return True
-            outtxt += "delete?:" + str(self.push_delete) + "\n"
-
-            if bool_only:
-                return (name_match or name_match_cl) and (desc_match or desc_match_fuzzy) and not self.push_delete
-            else:
-                return outtxt
-
-        if bool_only:
-            return False
-        else:
-            return None
-
-    def update_dest(self):
-        if self.do_sync:
-            if self.push_delete:
-                if self.syncsession.ise_source:
-                    return "meraki"
-                else:
-                    return "ise"
-            if self.meraki_id is None or self.meraki_id == "":
-                return "meraki"
-            if self.ise_id is None or self.ise_id == "":
-                return "ise"
-            if not self.in_sync():
-                if self.syncsession.ise_source:
-                    return "meraki"
-                else:
-                    return "ise"
-
-        return "none"
-
-    # def push_config(self):
-    #     d = self.update_dest()
-    #     if d == "ise":
-    #         if self.push_delete:
-    #             thismeth = "DELETE"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/sgt/" + self.ise_id
-    #             return thismeth, url, None
-    #         elif self.ise_id is not None and self.ise_id != "":
-    #             thismeth = "PUT"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/sgt/" + self.ise_id
-    #         else:
-    #             thismeth = "POST"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/sgt"
-    #
-    #         return thismeth, url, json.dumps({"Sgt": {"name": self.cleaned_name(), "description": self.description,
-    #                                                   "value": self.tag_number, "propogateToApic": False,
-    #                                                   "defaultSGACLs": []}})
-    #     elif d == "meraki":
-    #         if self.push_delete:
-    #             thismeth = "DELETE"
-    #             url = self.syncsession.dashboard.baseurl + "/organizations/" + str(self.syncsession.dashboard.orgid) +\
-    #                 "/adaptivePolicy/groups/" + self.meraki_id
-    #             return thismeth, url, None
-    #         elif self.meraki_id is not None and self.meraki_id != "":
-    #             thismeth = "PUT"
-    #             url = self.syncsession.dashboard.baseurl + "/organizations/" + str(self.syncsession.dashboard.orgid) +\
-    #                 "/adaptivePolicy/groups/" + self.meraki_id
-    #         else:
-    #             thismeth = "POST"
-    #             url = self.syncsession.dashboard.baseurl + "/organizations/" + str(self.syncsession.dashboard.orgid) +\
-    #                 "/adaptivePolicy/groups"
-    #
-    #         return thismeth, url, json.dumps({"value": self.tag_number, "name": self.name,
-    #                                           "description": self.description})
-    #
-    #     return "", "", ""
+        return self.objects_match(bool_only=True)
 
 
 @receiver(post_save, sender=Tag)
@@ -442,7 +506,7 @@ def post_save_tag(sender, instance=None, created=False, **kwargs):
 
         policies = Policy.objects.filter(Q(source_group=instance) | Q(dest_group=instance))
         for p in policies:
-            if p.source_group.do_sync and p.dest_group.do_sync:
+            if p.source_group and p.source_group.do_sync and p.dest_group and p.dest_group.do_sync:
                 p.do_sync = True
             else:
                 p.do_sync = False
@@ -456,35 +520,120 @@ class ACL(models.Model):
     description = models.CharField("Tag Description", max_length=100, blank=False, null=False)
     do_sync = models.BooleanField("Sync this ACL?", default=False, editable=True)
     syncsession = models.ForeignKey(SyncSession, on_delete=models.SET_NULL, null=True, blank=True)
-    meraki_id = models.CharField(max_length=36, blank=True, null=True, default=None)
-    ise_id = models.CharField("ISE id", max_length=36, blank=True, null=True, default=None)
-    meraki_data = models.TextField(blank=True, null=True, default=None)
-    ise_data = models.TextField("ISE data", blank=True, null=True, default=None)
-    meraki_ver = models.IntegerField(blank=True, null=True, default=None)
-    ise_ver = models.IntegerField(blank=True, null=True, default=None)
-    needs_update = models.TextField(blank=True, null=True, default=None)
-    update_failed = models.BooleanField(default=False, editable=False)
-    last_update = models.DateTimeField(default=django.utils.timezone.now)
-    last_update_data = models.TextField(blank=True, null=True, default=None)
-    last_update_state = models.CharField(max_length=20, blank=True, null=True, default=None)
-    push_delete = models.BooleanField(default=False, editable=False)
-    sourced_from = models.CharField(max_length=20, blank=True, null=True, default=None)
+    origin_ise = models.ForeignKey(ISEServer, on_delete=models.SET_NULL, null=True, blank=True)
+    origin_org = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True)
     visible = models.BooleanField(default=True, editable=False)
+    push_delete = models.BooleanField(default=False, editable=False)
 
     class Meta:
         verbose_name = "ACL"
         verbose_name_plural = "ACLs"
 
     def __str__(self):
-        return self.name    # + " -- Valid:" + str(self.is_valid_config()) + " -- Matches:" + str(self.in_sync())
+        return self.name
+
+    def get_objects(self):
+        return self.acldata_set.all()
+
+    def last_update(self):
+        objs = self.get_objects()
+        lu = None
+        for o in objs:
+            if o.last_update or (lu and o.last_update and o.last_update > lu):
+                lu = o.last_update
+
+        if not lu:
+            return "Never"
+        return lu
+
+    def objects_desc(self):
+        out = []
+        for d in self.get_objects():
+            out.append(str(d))
+
+        return "\n".join(out)
 
     def update_success(self):
-        if self.last_update_state == "True" and not self.update_failed:
+        if self.do_sync and self.visible:
+            if not self.objects_in_sync():
+                return False
+
             return True
-        elif self.last_update_state == "False" or self.update_failed:
-            return False
 
         return None
+
+    def objects_in_sync(self):
+        return self.objects_match(bool_only=True)
+
+    def object_update_target(self):
+        return self.objects_match(get_target=True)
+
+    def objects_match(self, bool_only=False, get_target=False):
+        full_match = True
+        header = ["Source", "Name", "Cleaned Name", "Description", "Fuzzy Description", "ACL", "Version",
+                  "Pending Delete"]
+        combined_vals = {}
+        f_show = f_comp = [""] * len(header)
+        expected_vals = [""] * len(header)
+        match_required = [True] * len(header)
+        custom_match_list = [None] * len(header)
+        for hnum in range(0, len(header)):
+            combined_vals[str(hnum)] = []
+        out = "<table><tr><th>" + "</th><th>".join(header) + "</th></tr>"
+        for o in self.get_objects():
+            try:
+                if not o.source_data:
+                    jo = {}
+                    a6 = jo.get("ipVersion", "UNKNOWN")
+                else:
+                    jo = json_try_load(o.source_data, {})
+                    a6 = jo.get("ipVersion", "IP_AGNOSTIC")
+                a0 = o.hyperlink()
+                a1 = jo.get("name", "UNKNOWN")
+                a2 = re.sub('[^0-9a-zA-Z]+', '_', jo.get("name", "UNKNOWN")[:32])
+                a3 = jo.get("description", "UNKNOWN")
+                a4 = jo.get("description", "UNKNOWN").translate(str.maketrans('', '', string.punctuation)).lower()
+                a5_show = htmlprep(jo.get("rules")) if o.organization else jo.get("aclcontent", "")
+                a5_comp = self.normalize_meraki_rules(jo.get("rules"), mode="convert") if o.organization else \
+                    jo.get("aclcontent")
+                a7 = str(o.acl.push_delete)
+
+                f_show = [a0, a1, a2, a3, a4, a5_show, a6, a7]
+                f_comp = [a0, a1, a2, a3, a4, a5_comp, a6, a7]
+                expected_vals = [None, None, None, None, None, None, None, "False"]
+                match_required = [False, False, True, False, True, True, True, True]
+                custom_match_list[6] = [["agnostic", "IP_AGNOSTIC"], ["ipv4", "IPV4"], ["ipv6", "IPV6"]]
+                for x in range(1, len(header)):
+                    combined_vals[str(x)].append(f_comp[x])
+            except Exception as e:
+                print("Exception", e)
+                jo = {}
+            out += "<tr><td>" + "</td><td>".join(f_show) + "</td></tr>"
+
+        out += "<tr><td><i>Matches?</i></td>"
+        for x in range(1, len(header)):
+            matches = chk_list(combined_vals[str(x)], expected_vals[x], custom_match_list[x])
+            if not matches and match_required[x]:
+                full_match = False
+            out += "<td>" + str(matches) + "</td>"
+        out += "</tr></table>"
+
+        if not self.visible:
+            out += "<hr><b><u>NOTE:THIS SGACL WILL ALWAYS RETURN matches=True SINCE IT IS BUILT-IN.</b></u>"
+            if bool_only:
+                return True
+
+        if get_target:
+            if not full_match:
+                if self.origin_ise:
+                    return "meraki"
+                else:
+                    return "ise"
+            return None
+        elif bool_only:
+            return full_match
+        else:
+            return format_html(out)
 
     def cleaned_name(self):
         newname = self.name[:32]
@@ -492,7 +641,7 @@ class ACL(models.Model):
         return newname
 
     def in_sync(self):
-        return self.match_report(bool_only=True)
+        return self.objects_match(bool_only=True)
 
     def make_port_list(self, port_range):
         p_list = []
@@ -513,6 +662,9 @@ class ACL(models.Model):
         return "eq " + str(port_range)
 
     def normalize_meraki_rules(self, rule_list, mode="compare"):
+        if not rule_list:
+            return ""
+
         if mode == "compare":
             outtxt = ""
             for r in rule_list:
@@ -528,12 +680,8 @@ class ACL(models.Model):
                     outtxt += r["protocol"].lower().strip()
                     if r["srcPort"] != "any":
                         outtxt += " src " + self.make_port_list(r["srcPort"])
-                    # else:
-                    #     outtxt += " src any"
                     if r["dstPort"] != "any":
                         outtxt += " dst " + self.make_port_list(r["dstPort"])
-                    # else:
-                    #     outtxt += " dst any"
 
                 outtxt = outtxt.strip() + "\n"
             return outtxt[:-1].strip()
@@ -550,12 +698,8 @@ class ACL(models.Model):
                     outtxt += r["protocol"].lower().strip()
                     if r["srcPort"] != "any":
                         outtxt += " src " + self.make_port_list(r["srcPort"])
-                    # else:
-                    #     outtxt += " src any"
                     if r["dstPort"] != "any":
                         outtxt += " dst " + self.make_port_list(r["dstPort"])
-                    # else:
-                    #     outtxt += " dst any"
 
                 outtxt = outtxt.strip() + "\n"
             return outtxt[:-1]
@@ -629,170 +773,19 @@ class ACL(models.Model):
 
         return ""
 
-    def match_report(self, bool_only=False):
-        outtxt = ""
-        if self.ise_id and self.ise_data and self.meraki_id and self.meraki_data:
-            try:
-                mdata = json.loads(self.meraki_data)
-                idata = json.loads(self.ise_data)
-
-                name_match = mdata.get("name", "mdata") == idata.get("name", "idata")
-                name_match_cl = self.cleaned_name() == idata.get("name", "idata")
-                m_desc = mdata.get("description", "mdata")
-                i_desc = idata.get("description", "idata")
-                desc_match = m_desc == i_desc
-                m_desc = m_desc.translate(str.maketrans('', '', string.punctuation)).lower()
-                i_desc = i_desc.translate(str.maketrans('', '', string.punctuation)).lower()
-                desc_match_fuzzy = m_desc == i_desc
-
-                acl_match = self.normalize_meraki_rules(mdata["rules"]) == self.normalize_ise_rules(idata["aclcontent"])
-                if "ipVersion" not in idata and mdata["ipVersion"] == "agnostic":
-                    # IP Agnostic
-                    ver_match = True
-                elif idata.get("ipVersion", "").lower() == mdata.get("ipVersion", ""):
-                    # Version matches
-                    ver_match = True
-                else:
-                    ver_match = False
-
-                outtxt += "name:" + str(name_match) + "\n"
-                outtxt += "cleaned name:" + str(name_match_cl) + "\n"
-                outtxt += "description:" + str(desc_match) + "\n"
-                outtxt += "fuzzy description:" + str(desc_match_fuzzy) + "\n"
-
-                test_ise_acl_1 = self.normalize_ise_rules(idata["aclcontent"]).strip().replace("\n", ";")
-                test_meraki_acl = self.normalize_ise_rules(idata["aclcontent"], mode="convert")
-                test_ise_acl_2 = self.normalize_meraki_rules(test_meraki_acl, mode="convert").strip().replace("\n", ";")
-                test_ise_acl_3 = self.normalize_ise_rules(test_ise_acl_2)
-                ise_valid_config = test_ise_acl_1 == test_ise_acl_3
-                outtxt += "----Filtered ISE Config:\n" + test_ise_acl_1 + "\n----Converted to ISE:\n" +\
-                          test_ise_acl_3 + "\n----\n"
-                outtxt += "ise_valid_acl?:" + str(ise_valid_config) + "\n"
-
-                outtxt += "meraki_acl:" + self.normalize_meraki_rules(mdata["rules"]) + "\n"
-                outtxt += "ise_acl:" + self.normalize_ise_rules(idata["aclcontent"]) + "\n"
-                outtxt += "acl:" + str(acl_match) + "\n"
-                outtxt += "version:" + str(ver_match) + "\n"
-                outtxt += "delete?:" + str(self.push_delete) + "\n"
-
-                if bool_only:
-                    return (name_match or name_match_cl) and \
-                           (desc_match or desc_match_fuzzy) and acl_match and ver_match and not self.push_delete
-                else:
-                    return outtxt
-            except Exception:
-                return False
-        elif self.ise_id and self.ise_data:
-            if self.visible is False:
-                outtxt += "NOTE:THIS SGACL WILL ALWAYS RETURN Matches:True SINCE IT IS BUILT-IN."
-                if bool_only:
-                    return True
-                else:
-                    return outtxt
-
-        if bool_only:
-            return False
-        else:
-            return None
-
     def is_valid_config(self):
-        if self.ise_id and self.ise_data and self.meraki_id and self.meraki_data:
-            try:
-                idata = json.loads(self.ise_data)
-
+        objs = self.get_objects()
+        for o in objs:
+            if o.iseserver and o.source_data and o.source_id:
+                idata = json_try_load(o.source_data, {})
                 test_ise_acl_1 = self.normalize_ise_rules(idata["aclcontent"]).strip().replace("\n", ";")
                 test_meraki_acl = self.normalize_ise_rules(idata["aclcontent"], mode="convert")
-                test_ise_acl_2 = self.normalize_meraki_rules(test_meraki_acl, mode="convert").strip().replace("\n", ";")
+                test_ise_acl_2 = self.normalize_meraki_rules(test_meraki_acl,
+                                                             mode="convert").strip().replace("\n", ";")
                 test_ise_acl_3 = self.normalize_ise_rules(test_ise_acl_2)
                 ise_valid_config = test_ise_acl_1 == test_ise_acl_3
                 return ise_valid_config
-            except Exception:
-                return False
-
         return True
-
-    def update_dest(self):
-        if self.meraki_id is None or self.meraki_id == "":
-            return "meraki"
-        if self.ise_id is None or self.ise_id == "":
-            return "ise"
-        if not self.in_sync():
-            if self.syncsession.ise_source:
-                return "meraki"
-            else:
-                return "ise"
-
-        return "none"
-
-    def get_version(self, update_dest):
-        if update_dest == "ise":
-            if self.meraki_id and self.meraki_data:
-                mdata = json.loads(self.meraki_data)
-                if mdata["ipVersion"] == "agnostic":
-                    return "IP_AGNOSTIC"
-                else:
-                    return mdata["ipVersion"].upper()
-        elif update_dest == "meraki":
-            if self.ise_id and self.ise_data:
-                idata = json.loads(self.ise_data)
-                if "ipVersion" in idata:
-                    return idata["ipVersion"].lower()
-                else:
-                    return "agnostic"
-        return ""
-
-    def get_rules(self, update_dest):
-        if update_dest == "ise":
-            if self.meraki_id and self.meraki_data:
-                mdata = json.loads(self.meraki_data)
-                sgacl = self.normalize_meraki_rules(mdata["rules"], mode="convert")
-                return sgacl
-        elif update_dest == "meraki":
-            if self.ise_id and self.ise_data:
-                idata = json.loads(self.ise_data)
-                sgacl = self.normalize_ise_rules(idata["aclcontent"], mode="convert")
-                return sgacl
-        return ""
-
-    # def push_config(self):
-    #     d = self.update_dest()
-    #     if not self.is_valid_config():
-    #         return "", "", ""
-    #
-    #     if d == "ise":
-    #         if self.push_delete:
-    #             thismeth = "DELETE"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/sgacl/" + self.ise_id
-    #             return thismeth, url, None
-    #         elif self.ise_id is not None and self.ise_id != "":
-    #             thismeth = "PUT"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/sgacl/" + self.ise_id
-    #         else:
-    #             thismeth = "POST"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/sgacl"
-    #
-    #         return thismeth, url, json.dumps({"Sgacl": {"name": self.cleaned_name(), "description": self.description,
-    #                                                     "ipVersion": self.get_version(d), "readOnly": False,
-    #                                                     "aclcontent": self.get_rules(d)}})  # .replace("\\n", "\n")
-    #     elif d == "meraki":
-    #         if self.push_delete:
-    #             thismeth = "DELETE"
-    #             url = self.syncsession.dashboard.baseurl + "/organizations/" + str(self.syncsession.dashboard.orgid) +\
-    #                 "/adaptivePolicy/acls/" + self.meraki_id
-    #             return thismeth, url, None
-    #         elif self.meraki_id is not None and self.meraki_id != "":
-    #             thismeth = "PUT"
-    #             url = self.syncsession.dashboard.baseurl + "/organizations/" + str(self.syncsession.dashboard.orgid) +\
-    #                 "/adaptivePolicy/acls/" + self.meraki_id
-    #         else:
-    #             thismeth = "POST"
-    #             url = self.syncsession.dashboard.baseurl + "/organizations/" + str(self.syncsession.dashboard.orgid) +\
-    #                 "/adaptivePolicy/acls"
-    #
-    #         return thismeth, url, json.dumps({"name": self.name, "description": self.description,
-    #                                           "ipVersion": self.get_version(d), "rules": self.get_rules(d)})
-    #
-    #     return "", "", ""
 
 
 @receiver(post_save, sender=ACL)
@@ -807,84 +800,160 @@ def post_save_acl(sender, instance=None, created=False, **kwargs):
 class Policy(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     mapping = models.CharField("Policy Mapping", max_length=50, blank=False, null=False)
-    name = models.CharField("Policy Name", max_length=100, blank=False, null=False)
+    name = models.CharField("Policy Name", max_length=100, blank=True, null=True)
     source_group = models.ForeignKey(Tag, on_delete=models.SET_NULL, null=True, blank=True, related_name="source_group")
     dest_group = models.ForeignKey(Tag, on_delete=models.SET_NULL, null=True, blank=True, related_name="dest_group")
     acl = models.ManyToManyField(ACL, blank=True, related_name="policies")
     description = models.CharField("Policy Description", max_length=100, blank=True, null=True)
     do_sync = models.BooleanField("Sync this Policy?", default=False, editable=True)
     syncsession = models.ForeignKey(SyncSession, on_delete=models.SET_NULL, null=True, blank=True)
-    meraki_id = models.CharField(max_length=36, blank=True, null=True, default=None)
-    ise_id = models.CharField("ISE id", max_length=36, blank=True, null=True, default=None)
-    meraki_data = models.TextField(blank=True, null=True, default=None)
-    ise_data = models.TextField("ISE data", blank=True, null=True, default=None)
-    meraki_ver = models.IntegerField(blank=True, null=True, default=None)
-    ise_ver = models.IntegerField(blank=True, null=True, default=None)
-    needs_update = models.TextField(blank=True, null=True, default=None)
-    update_failed = models.BooleanField(default=False, editable=False)
-    last_update = models.DateTimeField(default=django.utils.timezone.now)
-    last_update_data = models.TextField(blank=True, null=True, default=None)
-    last_update_state = models.CharField(max_length=20, blank=True, null=True, default=None)
+    origin_ise = models.ForeignKey(ISEServer, on_delete=models.SET_NULL, null=True, blank=True)
+    origin_org = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True)
     push_delete = models.BooleanField(default=False, editable=False)
-    sourced_from = models.CharField(max_length=20, blank=True, null=True, default=None)
 
     class Meta:
         verbose_name_plural = "policies"
 
     def __str__(self):
-        return self.name + " (" + self.mapping + ")"    # + " -- Matches:" + str(self.in_sync())
+        return self.name + " (" + self.mapping + ")"
+
+    def get_objects(self):
+        return self.policydata_set.all()
+
+    def last_update(self):
+        objs = self.get_objects()
+        lu = None
+        for o in objs:
+            if o.last_update or (lu and o.last_update and o.last_update > lu):
+                lu = o.last_update
+
+        if not lu:
+            return "Never"
+        return lu
+
+    def objects_desc(self):
+        out = []
+        for d in self.get_objects():
+            out.append(str(d))
+
+        return "\n".join(out)
 
     def update_success(self):
-        if self.last_update_state == "True" and not self.update_failed:
+        if self.do_sync:
+            if not self.objects_in_sync():
+                return False
+
             return True
-        elif self.last_update_state == "False" or self.update_failed:
-            return False
 
         return None
+
+    def objects_in_sync(self):
+        return self.objects_match(bool_only=True)
+
+    def object_update_target(self):
+        return self.objects_match(get_target=True)
+
+    def objects_match(self, bool_only=False, get_target=False):
+        full_match = True
+        header = ["Source", "Name", "Cleaned Name", "Description", "Fuzzy Description", "Source", "Dest",
+                  "Default Rule", "SGACLs", "Pending Delete"]
+        combined_vals = {}
+        f_show = f_comp = [""] * len(header)
+        expected_vals = [""] * len(header)
+        match_required = [True] * len(header)
+        custom_match_list = [None] * len(header)
+        for hnum in range(0, len(header)):
+            combined_vals[str(hnum)] = []
+        out = "<table><tr><th>" + "</th><th>".join(header) + "</th></tr>"
+        for o in self.get_objects():
+            try:
+                if not o.source_data:
+                    jo = {}
+                else:
+                    jo = json_try_load(o.source_data, {})
+                src_sgt, dst_sgt = self.lookup_sgts(o)
+                raw_sgacls = self.lookup_sgacls(o)
+                sgacls = []
+                sgacl_ids = []
+                for a in raw_sgacls or []:
+                    sgacls.append(a.acl.name)
+                    sgacl_ids.append(a.acl.id)
+
+                a0 = o.hyperlink()
+                a1 = jo.get("name", "UNKNOWN")
+                a2 = re.sub('[^0-9a-zA-Z]+', '_', jo.get("name", "UNKNOWN")[:32])
+                a3 = jo.get("description", "UNKNOWN")
+                a4 = jo.get("description", "UNKNOWN").translate(str.maketrans('', '', string.punctuation)).lower()
+                a5 = str(src_sgt.tag.tag_number) if src_sgt else "N/A"
+                a6 = str(dst_sgt.tag.tag_number) if dst_sgt else "N/A"
+                a7 = jo.get("catchAllRule", "UNKNOWN") if o.organization else jo.get("defaultRule", "UNKNOWN")
+                a8 = str(sgacls)
+                a9 = str(o.policy.push_delete)
+
+                f_show = [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9]
+                f_comp = [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9]
+                expected_vals = [None, None, None, None, None, None, None, None, None, "False"]
+                match_required = [False, False, True, False, True, True, True, True, True, True]
+                custom_match_list[7] = [["global", "NONE"], ["deny all", "DENY_IP"],
+                                        ["allow all", "permit all", "PERMIT_IP"]]
+                custom_match_list[8] = [["['Permit IP']", "[]"], ["['Deny IP']", "[]"]]
+                for x in range(1, len(header)):
+                    combined_vals[str(x)].append(f_comp[x])
+            except Exception as e:
+                print("Exception", e, traceback.format_exc())
+                jo = {}
+            out += "<tr><td>" + "</td><td>".join(f_show) + "</td></tr>"
+
+        out += "<tr><td><i>Matches?</i></td>"
+        for x in range(1, len(header)):
+            matches = chk_list(combined_vals[str(x)], expected_vals[x], custom_match_list[x])
+            if not matches and match_required[x]:
+                full_match = False
+            out += "<td>" + str(matches) + "</td>"
+        out += "</tr></table>"
+
+        if get_target:
+            if not full_match:
+                if self.origin_ise:
+                    return "meraki"
+                else:
+                    return "ise"
+            return None
+        elif bool_only:
+            return full_match
+        else:
+            return format_html(out)
 
     def cleaned_name(self):
         newname = self.name[:32]
         newname = re.sub('[^0-9a-zA-Z-]+', '_', newname)
         return newname
 
-    def lookup_ise_sgts(self):
-        if self.ise_id and self.ise_data:
-            idata = json.loads(self.ise_data)
-            p_src = Tag.objects.filter(ise_id=idata["sourceSgtId"])
-            p_dst = Tag.objects.filter(ise_id=idata["destinationSgtId"])
+    def lookup_sgts(self, object):
+        if object.source_id and object.source_data:
+            data = json_try_load(object.source_data, {"srcGroupId": "zzz", "dstGroupId": "zzz", "sourceSgtId": "zzz", "destinationSgtId": "zzz"})
+            if object.organization:
+                p_src = TagData.objects.filter(organization=object.organization).filter(source_id=data["srcGroupId"])
+                p_dst = TagData.objects.filter(organization=object.organization).filter(source_id=data["dstGroupId"])
+            else:
+                p_src = TagData.objects.filter(iseserver=object.iseserver).filter(source_id=data["sourceSgtId"])
+                p_dst = TagData.objects.filter(iseserver=object.iseserver).filter(source_id=data["destinationSgtId"])
             if len(p_src) >= 1 and len(p_dst) >= 1:
                 return p_src[0], p_dst[0]
 
         return None, None
 
-    def lookup_ise_sgacls(self):
-        if self.ise_id and self.ise_data:
-            idata = json.loads(self.ise_data)
+    def lookup_sgacls(self, object):
+        if object.source_id and object.source_data:
+            data = json_try_load(object.source_data, {"aclIds": [], "sgacls": []})
             out_acl = []
-            for s in idata["sgacls"]:
-                p_acl = ACL.objects.filter(ise_id=s)
-                if len(p_acl) >= 1:
-                    out_acl.append(p_acl[0])
-            return out_acl
+            itername = data["aclIds"] if object.organization else data["sgacls"]
+            for s in itername:
+                if object.organization:
+                    p_acl = ACLData.objects.filter(organization=object.organization).filter(source_id=s)
+                else:
+                    p_acl = ACLData.objects.filter(iseserver=object.iseserver).filter(source_id=s)
 
-        return None
-
-    def lookup_meraki_sgts(self):
-        if self.meraki_id and self.meraki_data:
-            mdata = json.loads(self.meraki_data)
-            p_src = Tag.objects.filter(meraki_id=mdata["srcGroupId"])
-            p_dst = Tag.objects.filter(meraki_id=mdata["dstGroupId"])
-            if len(p_src) >= 1 and len(p_dst) >= 1:
-                return p_src[0], p_dst[0]
-
-        return None, None
-
-    def lookup_meraki_sgacls(self):
-        if self.meraki_id and self.meraki_data:
-            mdata = json.loads(self.meraki_data)
-            out_acl = []
-            for s in mdata["aclIds"]:
-                p_acl = ACL.objects.filter(meraki_id=s)
                 if len(p_acl) >= 1:
                     out_acl.append(p_acl[0])
             return out_acl
@@ -892,203 +961,7 @@ class Policy(models.Model):
         return None
 
     def in_sync(self):
-        return self.match_report(bool_only=True)
-
-    def match_report(self, bool_only=False):
-        outtxt = ""
-        if self.ise_id and self.ise_data and self.meraki_id and self.meraki_data:
-            mdata = json.loads(self.meraki_data)
-            idata = json.loads(self.ise_data)
-            i_sgt_src, i_sgt_dst = self.lookup_ise_sgts()
-            m_sgt_src, m_sgt_dst = self.lookup_meraki_sgts()
-            i_sgacls = self.lookup_ise_sgacls()
-            i_sgacls_o = []
-            for i in i_sgacls:
-                i_sgacls_o.append(i.name)
-            m_sgacls = self.lookup_meraki_sgacls()
-            m_sgacls_o = []
-            for m in m_sgacls:
-                m_sgacls_o.append(m.name)
-
-            # name_match = mdata.get("name", "mdata") == idata.get("name", "idata")
-            ise_single_rule_match = False
-            if mdata["catchAllRule"] == "global" and idata["defaultRule"] == "NONE":
-                default_match = True
-            elif mdata["catchAllRule"] == "deny all" and idata["defaultRule"] == "DENY_IP":
-                default_match = True
-                if len(i_sgacls_o) == 1 and i_sgacls_o[0] == "Deny IP":
-                    ise_single_rule_match = True
-            elif (mdata["catchAllRule"] == "allow all" or mdata["catchAllRule"] == "permit all") and \
-                    idata["defaultRule"] == "PERMIT_IP":
-                default_match = True
-                if len(i_sgacls_o) == 1 and i_sgacls_o[0] == "Permit IP":
-                    ise_single_rule_match = True
-            else:
-                default_match = False
-            if i_sgt_src == m_sgt_src and i_sgt_dst == m_sgt_dst:
-                srcdst_match = True
-            else:
-                srcdst_match = False
-
-            # Check to see if there are the same number of SGACLs defined in each ACL List
-            if len(i_sgacls) == len(m_sgacls):
-                sgacl_match = True
-                # If so, iterate each list to make sure that the actual ACLs are the same in each list
-                for x in range(0, len(i_sgacls)):
-                    if i_sgacls[x].id != m_sgacls[x].id:
-                        sgacl_match = False
-            else:
-                # There is one situation where it is ok to have mismatched SGACL Lengths: when you create a policy in
-                # ISE that only contains a default Deny or Permit, ISE will also add a Deny or Permit ACL in addition
-                # to the default rule - we don't need this on the Meraki side. So if the length is 0 for Meraki, but
-                # contains a Deny or Permit rule (in addition to the corresponding Deny or Permit default), it's ok.
-                if len(m_sgacls) == 0 and ise_single_rule_match:
-                    sgacl_match = True
-                else:
-                    sgacl_match = False
-
-            outtxt += "name:" + str(mdata["name"] == idata["name"]) + "\n"
-            outtxt += "catchAllRule:" + str(default_match) + "\n"
-            if i_sgt_src and m_sgt_src:
-                outtxt += "src:" + str(i_sgt_src.tag_number) + "," + str(m_sgt_src.tag_number) + "\n"
-            if i_sgt_dst and m_sgt_dst:
-                outtxt += "dst:" + str(i_sgt_dst.tag_number) + "," + str(m_sgt_dst.tag_number) + "\n"
-            outtxt += "src/dst tags:" + str(srcdst_match) + "\n"
-            outtxt += "meraki sgacls:" + str(m_sgacls_o) + "\n"
-            outtxt += "ise sgacls:" + str(i_sgacls_o) + "\n"
-            outtxt += "sgacls:" + str(sgacl_match) + "\n"
-            outtxt += "delete?:" + str(self.push_delete) + "\n"
-
-            if bool_only:
-                return default_match and srcdst_match and sgacl_match and not self.push_delete
-            else:
-                return outtxt
-
-        if bool_only:
-            return False
-        else:
-            return None
-
-    def update_dest(self):
-        if self.meraki_id is None or self.meraki_id == "":
-            return "meraki"
-        if self.ise_id is None or self.ise_id == "":
-            return "ise"
-        if not self.in_sync():
-            if self.syncsession.ise_source:
-                return "meraki"
-            else:
-                return "ise"
-
-        return "none"
-
-    def get_catchall(self, update_dest):
-        if update_dest == "ise":
-            if self.meraki_id and self.meraki_data:
-                mdata = json.loads(self.meraki_data)
-                if mdata["catchAllRule"] == "deny all":
-                    return "DENY_IP"
-                elif mdata["catchAllRule"] == "allow all" or mdata["catchAllRule"] == "permit all":
-                    return "PERMIT_IP"
-                elif mdata["catchAllRule"] == "global":
-                    return "NONE"
-                else:
-                    return "NONE"
-        elif update_dest == "meraki":
-            if self.ise_id and self.ise_data:
-                idata = json.loads(self.ise_data)
-                if idata["defaultRule"] == "DENY_IP":
-                    return "deny all"
-                elif idata["defaultRule"] == "PERMIT_IP":
-                    return "allow all"
-                elif idata["defaultRule"] == "NONE":
-                    return "global"
-                else:
-                    return "global"
-        return ""
-
-    def get_sgts(self, update_dest):
-        if update_dest == "ise":
-            m_sgt_src, m_sgt_dst = self.lookup_meraki_sgts()
-            if m_sgt_src and m_sgt_dst:
-                return m_sgt_src.ise_id, m_sgt_dst.ise_id
-            else:
-                return None, None
-        elif update_dest == "meraki":
-            i_sgt_src, i_sgt_dst = self.lookup_ise_sgts()
-            if i_sgt_src and i_sgt_dst:
-                return i_sgt_src.meraki_id, i_sgt_dst.meraki_id
-            else:
-                return None, None
-        return "", ""
-
-    def get_sgacls(self, update_dest):
-        if update_dest == "ise":
-            m_sgacls = self.lookup_meraki_sgacls()
-            outsgacl = []
-            for s in m_sgacls:
-                outsgacl.append(s.ise_id)
-            return outsgacl
-        elif update_dest == "meraki":
-            i_sgacls = self.lookup_ise_sgacls()
-            outsgacl = []
-            for s in i_sgacls:
-                if s.meraki_id is None:
-                    return None
-                outsgacl.append(int(s.meraki_id))
-            return outsgacl
-        return ""
-
-    # def push_config(self):
-    #     d = self.update_dest()
-    #     src, dst = self.get_sgts(d)
-    #     acl = self.get_sgacls(d)
-    #     if src is None or dst is None or acl is None:
-    #         return "", "", ""
-    #     if d == "ise":
-    #         if self.push_delete:
-    #             thismeth = "DELETE"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/egressmatrixcell"
-    #             return thismeth, url, None
-    #         elif self.ise_id is not None and self.ise_id != "":
-    #             thismeth = "PUT"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/egressmatrixcell"
-    #         else:
-    #             thismeth = "POST"
-    #             url = self.syncsession.iseserver.base_url() + "/ers/config/egressmatrixcell"
-    #
-    #         return thismeth, url, json.dumps({"EgressMatrixCell": {"sourceSgtId": src, "destinationSgtId": dst,
-    #                                                                "matrixCellStatus": "ENABLED",
-    #                                                                "defaultRule": self.get_catchall(d), "sgacls": acl,
-    #                                                                "name": self.name, "description": self.description}})
-    #     elif d == "meraki":
-    #         thismeth = "PUT"
-    #         url = self.syncsession.dashboard.baseurl + "/organizations/" + str(self.syncsession.dashboard.orgid) +\
-    #             "/adaptivePolicy/bindings"
-    #
-    #         if self.push_delete:
-    #             return thismeth, url, json.dumps({
-    #                     "description": self.name,
-    #                     "name": self.description,
-    #                     "monitorModeEnabled": False,
-    #                     "catchAllRule": "global",
-    #                     "bindingEnabled": True,
-    #                     "aclIds": None,
-    #                     "srcGroupId": src,
-    #                     "dstGroupId": dst
-    #                 })
-    #         return thismeth, url, json.dumps({
-    #                 "description": self.description,
-    #                 "name": self.name,
-    #                 "monitorModeEnabled": False,
-    #                 "catchAllRule": self.get_catchall(d),
-    #                 "bindingEnabled": True,
-    #                 "aclIds": acl,
-    #                 "srcGroupId": src,
-    #                 "dstGroupId": dst
-    #             })
-    #
-    #     return "", "", ""
+        return self.objects_match(bool_only=True)
 
 
 @receiver(post_save, sender=Policy)
@@ -1096,11 +969,11 @@ def post_save_policy(sender, instance=None, created=False, **kwargs):
     post_save.disconnect(post_save_policy, sender=Policy)
     if instance:
         instance.last_updated = datetime.datetime.now()
-        if instance.source_group.do_sync and instance.dest_group.do_sync:
+        if instance.source_group and instance.source_group.do_sync and instance.dest_group and \
+                instance.dest_group.do_sync:
             instance.do_sync = True
         instance.save()
 
-        # ACL.objects.all().update(do_sync=True)
         acls = ACL.objects.filter(id__in=instance.acl.all())
         for a in acls:
             a.do_sync = True
@@ -1134,3 +1007,256 @@ def post_save_task(sender, instance=None, created=False, **kwargs):
         instance.last_updated = datetime.datetime.now()
         instance.save()
     post_save.connect(post_save_task, sender=Task)
+
+
+class TagData(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, null=False, blank=False)
+    iseserver = models.ForeignKey(ISEServer, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True)
+    source_id = models.CharField(max_length=36, blank=True, null=True, default=None)
+    source_data = models.TextField(blank=True, null=True, default=None)
+    source_ver = models.IntegerField(blank=True, null=True, default=None)
+    last_sync = models.DateTimeField(default=None, null=True)
+    update_failed = models.BooleanField(default=False, editable=True)
+    last_update = models.DateTimeField(default=None, null=True)
+    last_update_data = models.TextField(blank=True, null=True, default=None)
+    last_update_state = models.CharField(max_length=20, blank=True, null=True, default=None)
+
+    class Meta:
+        verbose_name = "Tag Data"
+        verbose_name_plural = "Tag Data"
+        ordering = ('tag__tag_number', 'organization', 'iseserver')
+
+    def hyperlink(self):
+        # return "<a href='/admin/sync/tagdata/" + str(self.id) + "'>" + str(self) + "</a>"
+        return "<a href='/home/status-sgt-data?id=" + str(self.id) + "'>" + str(self) + "</a>"
+
+    def __str__(self):
+        if self.iseserver:
+            src = str(self.iseserver)
+        elif self.organization:
+            src = str(self.organization)
+        else:
+            src = "Unknown"
+        return src + " : " + self.tag.name + " (" + str(self.tag.tag_number) + ")"
+
+    def update_dest(self):
+        if self.tag and self.tag.do_sync:
+            if self.tag.push_delete:
+                if self.tag.syncsession.ise_source:
+                    return "meraki"
+                else:
+                    return "ise"
+            if self.organization and (self.source_id is None or self.source_id == ""):
+                return "meraki"
+            if self.iseserver and (self.source_id is None or self.source_id == ""):
+                return "ise"
+            if not self.tag.in_sync():
+                if self.tag.syncsession.ise_source:
+                    return "meraki"
+                else:
+                    return "ise"
+
+        return "none"
+
+
+class ACLData(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    acl = models.ForeignKey(ACL, on_delete=models.CASCADE, null=False, blank=False)
+    iseserver = models.ForeignKey(ISEServer, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True)
+    source_id = models.CharField(max_length=36, blank=True, null=True, default=None)
+    source_data = models.TextField(blank=True, null=True, default=None)
+    source_ver = models.IntegerField(blank=True, null=True, default=None)
+    last_sync = models.DateTimeField(default=None, null=True)
+    update_failed = models.BooleanField(default=False, editable=True)
+    last_update = models.DateTimeField(default=None, null=True)
+    last_update_data = models.TextField(blank=True, null=True, default=None)
+    last_update_state = models.CharField(max_length=20, blank=True, null=True, default=None)
+
+    class Meta:
+        verbose_name = "ACL Data"
+        verbose_name_plural = "ACL Data"
+
+    def hyperlink(self):
+        # return "<a href='/admin/sync/acldata/" + str(self.id) + "'>" + str(self) + "</a>"
+        return "<a href='/home/status-sgacl-data?id=" + str(self.id) + "'>" + str(self) + "</a>"
+
+    def __str__(self):
+        if self.iseserver:
+            src = str(self.iseserver)
+        elif self.organization:
+            src = str(self.organization)
+        else:
+            src = "Unknown"
+        return src + " : " + self.acl.name
+
+    def lookup_version(self, obj):
+        if obj.organization:
+            acl = ACLData.objects.filter(Q(acl=obj.acl) & Q(iseserver=obj.acl.syncsession.iseserver) & Q(source_id__isnull=False))
+            if len(acl) > 0:
+                source_data = acl[0].source_data
+                idata = json_try_load(source_data, {})
+                if "ipVersion" in idata:
+                    return idata["ipVersion"].lower()
+                else:
+                    return "agnostic"
+        else:
+            acl = ACLData.objects.filter(Q(acl=obj.acl) & Q(organization__in=obj.acl.syncsession.dashboard.organization.all()) & Q(source_id__isnull=False))
+            if len(acl) > 0:
+                source_data = acl[0].source_data
+                mdata = json_try_load(source_data, {})
+                if mdata["ipVersion"] == "agnostic":
+                    return "IP_AGNOSTIC"
+                else:
+                    return mdata["ipVersion"].upper()
+
+        return None
+
+    def lookup_rules(self, obj):
+        if obj.organization:
+            acl = ACLData.objects.filter(Q(acl=obj.acl) & Q(iseserver=obj.acl.syncsession.iseserver) & Q(source_id__isnull=False))
+            if len(acl) > 0:
+                source_data = acl[0].source_data
+                idata = json_try_load(source_data, {})
+                sgacl = self.acl.normalize_ise_rules(idata["aclcontent"], mode="convert")
+                return sgacl
+        else:
+            acl = ACLData.objects.filter(Q(acl=obj.acl) & Q(organization__in=obj.acl.syncsession.dashboard.organization.all()) & Q(source_id__isnull=False))
+            if len(acl) > 0:
+                source_data = acl[0].source_data
+                mdata = json_try_load(source_data, {})
+                sgacl = self.acl.normalize_meraki_rules(mdata["rules"], mode="convert")
+                return sgacl
+
+        return None
+
+    def update_dest(self):
+        if self.acl and self.acl.do_sync:
+            if self.acl.push_delete:
+                if self.acl.syncsession.ise_source:
+                    return "meraki"
+                else:
+                    return "ise"
+            if self.organization and (self.source_id is None or self.source_id == ""):
+                return "meraki"
+            if self.iseserver and (self.source_id is None or self.source_id == ""):
+                return "ise"
+            if not self.acl.in_sync():
+                if self.acl.syncsession.ise_source:
+                    return "meraki"
+                else:
+                    return "ise"
+
+        return "none"
+
+
+class PolicyData(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    policy = models.ForeignKey(Policy, on_delete=models.CASCADE, null=False, blank=False)
+    iseserver = models.ForeignKey(ISEServer, on_delete=models.CASCADE, null=True, blank=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True)
+    source_id = models.CharField(max_length=36, blank=True, null=True, default=None)
+    source_data = models.TextField(blank=True, null=True, default=None)
+    source_ver = models.IntegerField(blank=True, null=True, default=None)
+    last_sync = models.DateTimeField(default=None, null=True)
+    update_failed = models.BooleanField(default=False, editable=True)
+    last_update = models.DateTimeField(default=None, null=True)
+    last_update_data = models.TextField(blank=True, null=True, default=None)
+    last_update_state = models.CharField(max_length=20, blank=True, null=True, default=None)
+
+    class Meta:
+        verbose_name = "Policy Data"
+        verbose_name_plural = "Policy Data"
+
+    def hyperlink(self):
+        # return "<a href='/admin/sync/policydata/" + str(self.id) + "'>" + str(self) + "</a>"
+        return "<a href='/home/status-policy-data?id=" + str(self.id) + "'>" + str(self) + "</a>"
+
+    def __str__(self):
+        if self.iseserver:
+            src = str(self.iseserver)
+        elif self.organization:
+            src = str(self.organization)
+        else:
+            src = "Unknown"
+        return src + " : " + self.policy.mapping
+
+    def update_dest(self):
+        if self.policy and self.policy.do_sync:
+            if self.policy.push_delete:
+                if self.policy.syncsession.ise_source:
+                    return "meraki"
+                else:
+                    return "ise"
+            if self.organization and (self.source_id is None or self.source_id == ""):
+                return "meraki"
+            if self.iseserver and (self.source_id is None or self.source_id == ""):
+                return "ise"
+            if not self.policy.in_sync():
+                if self.policy.syncsession.ise_source:
+                    return "meraki"
+                else:
+                    return "ise"
+
+        return "none"
+
+    def lookup_sgacl_data(self, obj):
+        if obj.organization:
+            acl = ACLData.objects.filter(Q(acl__in=obj.policy.acl.all()) & Q(organization=obj.organization) & Q(source_id__isnull=False))
+        else:
+            acl = ACLData.objects.filter(Q(acl__in=obj.policy.acl.all()) & Q(iseserver=obj.policy.syncsession.iseserver) & Q(source_id__isnull=False))
+
+        if len(acl) == len(obj.policy.acl.all()):
+            return acl
+
+        return None
+
+    def lookup_acl_catchall(self, obj, convert=False):
+        if obj.organization or (convert and not obj.organization):
+            src = PolicyData.objects.filter(Q(policy=obj.policy) & Q(iseserver=obj.policy.syncsession.iseserver) & Q(source_id__isnull=False))
+            if len(src) > 0:
+                source_data = src[0].source_data
+                idata = json_try_load(source_data, {})
+                if idata["defaultRule"] == "DENY_IP":
+                    return "deny all"
+                elif idata["defaultRule"] == "PERMIT_IP":
+                    return "allow all"
+                elif idata["defaultRule"] == "NONE":
+                    return "global"
+                else:
+                    return "global"
+        else:
+            src = PolicyData.objects.filter(Q(policy=obj.policy) & Q(organization__in=obj.policy.syncsession.dashboard.organization.all()) & Q(source_id__isnull=False))
+            if len(src) > 0:
+                source_data = src[0].source_data
+                mdata = json_try_load(source_data, {})
+                if mdata["catchAllRule"] == "deny all":
+                    return "DENY_IP"
+                elif mdata["catchAllRule"] == "allow all" or mdata["catchAllRule"] == "permit all":
+                    return "PERMIT_IP"
+                elif mdata["catchAllRule"] == "global":
+                    return "NONE"
+                else:
+                    return "NONE"
+
+        return None
+
+    def lookup_sgt_data(self, obj):
+        if obj.organization:
+            src = TagData.objects.filter(Q(tag=obj.policy.source_group) & Q(organization=obj.organization) &
+                                         Q(source_id__isnull=False))
+            dst = TagData.objects.filter(Q(tag=obj.policy.dest_group) & Q(organization=obj.organization) &
+                                         Q(source_id__isnull=False))
+            if len(src) > 0 and len(dst) > 0:
+                return src[0], dst[0]
+        else:
+            src = TagData.objects.filter(Q(tag=obj.policy.source_group) &
+                                         Q(iseserver=obj.policy.syncsession.iseserver) & Q(source_id__isnull=False))
+            dst = TagData.objects.filter(Q(tag=obj.policy.dest_group) &
+                                         Q(iseserver=obj.policy.syncsession.iseserver) & Q(source_id__isnull=False))
+            if len(src) > 0 and len(dst) > 0:
+                return src[0], dst[0]
+
+        return None, None

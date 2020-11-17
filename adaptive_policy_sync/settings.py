@@ -41,7 +41,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'django_extensions',
-    'django_apscheduler',
     'pytest_django',
 ]
 
@@ -80,9 +79,20 @@ WSGI_APPLICATION = 'adaptive_policy_sync.wsgi.application'
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 DATABASES = {
+    'default_mysql': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'apsync',
+        'USER': 'apsync',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '',
+    },
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'OPTIONS': {
+            'timeout': 120,
+        }
     }
 }
 
@@ -148,4 +158,4 @@ STATICFILES_DIRS = [
 
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"  # Default
 
-CUSTOM_UA = "Adaptive-Policy-Sync 1.0b"
+CUSTOM_UA = "Adaptive-Policy-Sync 1.1"

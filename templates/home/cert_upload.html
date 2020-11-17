@@ -1,0 +1,58 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    {% if form.errors %}
+        {% for field in form %}
+            {% for error in field.errors %}
+                <div class="alert alert-danger">
+                    <strong>{{ error|escape }}</strong>
+                </div>
+            {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+            <div class="alert alert-danger">
+                <strong>{{ error|escape }}</strong>
+            </div>
+        {% endfor %}
+    {% endif %}
+    <form class="md-panel__form" enctype="multipart/form-data" method="POST" action="/home/upload-cert">
+        {% csrf_token %}
+        <tbody class="md-input-group">
+            <tr class="md-input__icon-container">
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="description">
+                            <span style="float:left">{{ form.description.label }}</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            <input class="md-input md-input--after md-dirty" tabindex="0" type="text" id="description" name="description" placeholder="{{ form.description.label }}" value="{{ data.0.base_desc }}">
+                            <span class="md-input__after">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="999999" onclick="clearinput('description')">
+                                    <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <label class="md-label md-input__label" for="file">
+                            <span style="float:left">{{ form.file.label }}</span>
+                        </label>
+                        <div class="md-input__wrapper">
+                            {{ form.file }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6">
+                        <div class="md-input__wrapper">
+                            <button class="md-button md-button--blue">Upload</button>
+                        </div>
+                    </div>
+                </div>
+            </tr>
+        </tbody>
+    </form>
+{% endblock %}

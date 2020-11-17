@@ -98,9 +98,12 @@ class ERS(object):
         :param id: OID in the form of abcd1234-ef56-7890-abcd1234ef56
         :return: True/False
         """
-        if id and re.match(r'^([a-f0-9]{8}-([a-f0-9]{4}-){3}[a-z0-9]{12})$', id):
-            return True
-        else:
+        try:
+            if id and re.match(r'^([a-f0-9]{8}-([a-f0-9]{4}-){3}[a-z0-9]{12})$', id):
+                return True
+            else:
+                return False
+        except Exception:
             return False
 
     @staticmethod
@@ -201,7 +204,7 @@ class ERS(object):
         """
         result = {
             'success': False,
-            'response': '',
+            'response': [],
             'error': '',
         }
 
@@ -217,29 +220,34 @@ class ERS(object):
         if filter:
             f.args['filter'] = filter
 
-        resp = self.ise.get(f.url)
+        pageurl = f.url
+        while True:
+            resp = self.ise.get(pageurl)
 
-        # TODO add dynamic paging?
-        if resp.status_code == 200:
-            json_res = resp.json()['SearchResult']
-            if int(json_res['total']) >= 1:
-                result['success'] = True
-                if json_res.get('nextPage'):
-                    result['nextPage'] = json_res['nextPage']['href'].split('=')[-1]
-                if json_res.get('previousPage'):
-                    result['prev'] = json_res['previousPage']['href'].split('=')[-1]
-                result['total'] = json_res['total']
-                result['response'] = [(i['name'], i['id'])
-                                      for i in json_res['resources']]
-                return result
-
-            elif int(json_res['total']) == 0:
-                result['success'] = True
-                result['response'] = []
-                result['total'] = json_res['total']
-                return result
-        else:
-            return ERS._pass_ersresponse(result, resp)
+            if resp.status_code == 200:
+                json_res = resp.json()['SearchResult']
+                if int(json_res['total']) >= 1:
+                    result['success'] = True
+                    if json_res.get('nextPage'):
+                        result['nextPage'] = json_res['nextPage']['href'].split('=')[-1]
+                        result['nextHref'] = json_res['nextPage']['href'].split('=')
+                    if json_res.get('previousPage'):
+                        result['previousPage'] = json_res['previousPage']['href'].split('=')[-1]
+                        result['previousHref'] = json_res['previousPage']['href'].split('=')
+                    result['total'] = json_res['total']
+                    for i in json_res['resources']:
+                        result['response'].append((i['name'], i['id']))
+                    pageurl = json_res.get('nextPage', {}).get('href')
+                    if not pageurl:
+                        break
+                elif int(json_res['total']) == 0:
+                    result['success'] = True
+                    result['response'] = []
+                    result['total'] = json_res['total']
+                    return result
+            else:
+                return ERS._pass_ersresponse(result, resp)
+        return result
 
     def get_endpoint_groups(self, size=20, page=1):
         """
@@ -318,8 +326,9 @@ class ERS(object):
             out_objs = []
             objs = self._get_objects('{0}/config/sgt'.format(self.url_base), filter=filter, size=size, page=page)
             for o in objs["response"]:
-                sgt = self.get_object('{0}/config/sgt'.format(self.url_base), o[1], 'Sgt')
-                out_objs.append(sgt["response"])
+                if len(o) > 1:
+                    sgt = self.get_object('{0}/config/sgt'.format(self.url_base), o[1], 'Sgt')
+                    out_objs.append(sgt["response"])
             return {"success": objs["success"], "response": out_objs, "error": objs["error"]}
         else:
             return self._get_objects('{0}/config/sgt'.format(self.url_base), filter=filter, size=size, page=page)
@@ -507,8 +516,9 @@ class ERS(object):
             out_objs = []
             objs = self._get_objects('{0}/config/sgacl'.format(self.url_base), filter=filter, size=size, page=page)
             for o in objs["response"]:
-                sgacl = self.get_object('{0}/config/sgacl'.format(self.url_base), o[1], 'Sgacl')
-                out_objs.append(sgacl["response"])
+                if len(o) > 1:
+                    sgacl = self.get_object('{0}/config/sgacl'.format(self.url_base), o[1], 'Sgacl')
+                    out_objs.append(sgacl["response"])
             return {"success": objs["success"], "response": out_objs, "error": objs["error"]}
         else:
             return self._get_objects('{0}/config/sgacl'.format(self.url_base), filter=filter, size=size, page=page)
@@ -679,7 +689,7 @@ class ERS(object):
         else:
             return ERS._pass_ersresponse(result, resp)
 
-    def get_egressmatrixcells(self, detail=False, size=20, page=1):
+    def get_egressmatrixcells(self, detail=False, size=20, page=1, filter=None):
         """
         Get all TrustSec Egress Matrix Cells.
 
@@ -687,15 +697,14 @@ class ERS(object):
         :return: result dictionary
         """
 
-        filter = None
-
         if detail:
             out_objs = []
             objs = self._get_objects('{0}/config/egressmatrixcell'.format(self.url_base), filter=filter, size=size,
                                      page=page)
             for o in objs["response"]:
-                emc = self.get_object('{0}/config/egressmatrixcell'.format(self.url_base), o[1], 'EgressMatrixCell')
-                out_objs.append(emc["response"])
+                if len(o) > 1:
+                    emc = self.get_object('{0}/config/egressmatrixcell'.format(self.url_base), o[1], 'EgressMatrixCell')
+                    out_objs.append(emc["response"])
             return {"success": objs["success"], "response": out_objs, "error": objs["error"]}
         else:
             return self._get_objects('{0}/config/egressmatrixcell'.format(self.url_base), filter=filter, size=size,

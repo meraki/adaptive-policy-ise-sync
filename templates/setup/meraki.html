@@ -71,10 +71,12 @@
         </div>
         {% if data.apikey %}
             <script>
-                getdata('/orgs', 'apiUrl', '{{ data.orgid }}', 1, 'apiKey', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')
+                {# TODO : Add multi-org support #}
+                console.log('{{ org.orgid }}');
+                getdata('/orgs', 'apiUrl', '{{ org.orgid }}', 1, 'apiKey', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')
             </script>
         {% endif %}
-        <input type="hidden" id="orgid" name="orgid" value="{{ data.orgid }}" />
+        <input type="hidden" id="orgid" name="orgid" value="{{ org.orgid }}" />
         <input type="hidden" id="orgname" name="orgname" value="" />
     </form>
 {% endblock %}

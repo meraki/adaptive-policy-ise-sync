@@ -1,0 +1,34 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 4rem">Field</th>
+                        <th style="width: 32rem">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    <tr><td>Database ID</td><td>{{ data.id }}</td></tr>
+                    <tr><td>Tag</td><td>{{ data.tag }}</td></tr>
+                    {% if data.iseserver %}
+                        <tr><td>Origin (ISE)</td><td>{{ data.iseserver }}</td></tr>
+                    {% else %}
+                        <tr><td>Origin (Org)</td><td>{{ data.organization }}</td></tr>
+                    {% endif %}
+                    <tr><td>Source ID</td><td>{{ data.source_id }}</td></tr>
+                    <tr><td>Source Data</td><td><pre>{{ data.source_data|pretty_json|safe }}</pre></td></tr>
+                    <tr><td>Source Ver</td><td>{{ data.source_ver }}</td></tr>
+                    <tr><td>Last Sync</td><td>{{ data.last_sync }}</td></tr>
+                    <tr><td>Update Failed?</td><td>{{ data.update_failed }}</td></tr>
+                    <tr><td>Last Update</td><td>{{ data.last_update }}</td></tr>
+                    <tr><td>Update Data</td><td><pre>{{ data.last_update_data|safe }}</pre></td></tr>
+                    <tr><td>Update State</td><td>{{ data.last_update_state }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

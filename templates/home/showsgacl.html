@@ -7,29 +7,26 @@
             <table class="testTableClass">
                 <thead class="md-data-table__thead">
                     <tr>
-                        <th style="width: 8rem">Field</th>
+                        <th style="width: 4rem">Field</th>
                         <th style="width: 32rem">Value</th>
                     </tr>
                 </thead>
                 <tbody class="md-data-table__tbody">
+                    <tr><td>Database ID</td><td>{{ data.id }}</td></tr>
                     <tr><td>Name</td><td>{{ data.name }}</td></tr>
                     <tr><td>Name (for ISE)</td><td>{{ data.cleaned_name }}</td></tr>
-                    <tr><td>Source</td><td>{{ data.sourced_from }}</td></tr>
                     <tr><td>Description</td><td>{{ data.description }}</td></tr>
-                    <tr><td>Database ID</td><td>{{ data.id }}</td></tr>
-                    <tr><td>ISE ID</td><td>{{ data.ise_id }}</td></tr>
-                    <tr><td>ISE Raw Data</td><td><pre>{{ data.ise_data|pretty_json|safe }}</pre></td></tr>
-                    <tr><td>Meraki ID</td><td>{{ data.meraki_id }}</td></tr>
-                    <tr><td>Meraki Raw Data</td><td><pre>{{ data.meraki_data|pretty_json|safe }}</pre></td></tr>
-                    <tr><td>Last Update</td><td>{{ data.last_update }}</td></tr>
-                    <tr><td>Last Update Result</td><td><pre>{{ data.last_update_data|pretty_json|safe }}</pre></td></tr>
-                    <tr><td>Last Update State</td><td>{{ data.last_update_state }}</td></tr>
-                    <tr><td>Is ISE ACL Valid?</td><td>{{ data.is_valid_config }}</td></tr>
-                    <tr><td>In Sync?</td><td>{{ data.in_sync }}</td></tr>
-                    <tr><td>Sync Details</td><td><pre>{{ data.match_report }}</pre></td></tr>
-                    <tr><td>Who Needs Update?</td><td>{{ data.update_dest }}</td></tr>
-{#                    <tr><td>Config Push</td><td>{{ data.push_config }}</td></tr>#}
+                    <tr><td>Sync Enabled</td><td>{{ data.do_sync }}</td></tr>
+                    <tr><td>Sync Session</td><td>{{ data.syncsession }}</td></tr>
+                    {% if data.origin_ise %}
+                        <tr><td>Origin (ISE)</td><td>{{ data.origin_ise }}</td></tr>
+                    {% else %}
+                        <tr><td>Origin (Org)</td><td>{{ data.origin_org }}</td></tr>
+                    {% endif %}
+                    <tr><td>Visible?</td><td>{{ data.visible }}</td></tr>
                     <tr><td>Delete?</td><td>{{ data.push_delete }}</td></tr>
+                    <tr><td>Last Update</td><td>{{ data.last_update }}</td></tr>
+                    <tr><td>Match Report</td><td>{{ data.objects_match|safe }}</td></tr>
                 </tbody>
             </table>
         </div>

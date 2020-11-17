@@ -12,7 +12,7 @@ omit=
     ./old/*
     # Django (Migrations & Manage)
     ./manage.py
-    ./migrations/*
+    ./sync/migrations/*
     # Config file with private data
     ./_config.py
     # Sample config, which won't be used in testing

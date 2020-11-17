@@ -42,24 +42,24 @@
                              </div>
                         </td><td> {{ d.tag_number }} </td><td> {{ d.name }} </td><td> {{ d.description }} </td>
                         {% if d.do_sync %}
-                            {% if d.in_sync %}
-                                <td style="background-color:#55dd55"> {{ d.in_sync }} </td>
-                            {% elif d.ise_id and d.meraki_id %}
-                                <td style="background-color:#dd5555"> {{ d.in_sync }} </td>
-                            {% elif d.ise_id %}
+                            {% if d.objects_in_sync %}
+                                <td style="background-color:#55dd55"> {{ d.objects_in_sync }} </td>
+                            {% elif d.object_update_target == "meraki" %}
                                 <td style="background-color:#dd5555"> Meraki Missing </td>
+                            {% elif d.object_update_target == "ise" %}
+                                <td style="background-color:#dd5555"> ISE Missing</td>
                             {% else %}
-                                <td style="background-color:#dd5555"> ISE Missing </td>
+                                <td style="background-color:#dd5555"> Unknown</td>
                             {% endif %}
                         {% else %}
-                            {% if d.in_sync %}
+                            {% if d.objects_in_sync %}
                                 <td> {{ d.in_sync }} </td>
-                            {% elif d.ise_id and d.meraki_id %}
-                                <td> {{ d.in_sync }} </td>
-                            {% elif d.ise_id %}
+                            {% elif d.object_update_target == "meraki" %}
                                 <td> Meraki Missing </td>
-                            {% else %}
+                            {% elif d.object_update_target == "ise" %}
                                 <td> ISE Missing </td>
+                            {% else %}
+                                <td> Unknown</td>
                             {% endif %}
                         {% endif %}
                         <td> {{ d.last_update }} </td><td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.id }} </a></td><td><a href="/home/status-sgt" onclick="doDelete('sgt', '{{ d.id }}')"><span class="icon icon-delete_24"></span></a></td></tr>
