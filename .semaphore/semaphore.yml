@@ -34,7 +34,7 @@ blocks:
         - name: Style Check
           commands:
             - pip install flake8
-            - flake8 . --max-line-length=127
+            - flake8 . --max-line-length=180
 promotions:
   - name: Dockerize
     pipeline_file: pipeline_2.yml
