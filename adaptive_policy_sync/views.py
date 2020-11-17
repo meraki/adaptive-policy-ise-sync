@@ -1,14 +1,17 @@
-from sync.models import ISEServer, Upload, UploadZip, Dashboard, Tag, ACL, Policy, SyncSession
+from sync.models import ISEServer, Upload, UploadZip, Dashboard, Tag, ACL, Policy, SyncSession, Organization, TagData, \
+    ACLData, PolicyData
 from django.shortcuts import redirect, reverse, render
 from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.contrib.auth import views as auth_views
 from .forms import UploadForm
-import meraki
 from scripts.db_backup import backup
 from scripts.db_restore import restore
 import os
 from pathlib import Path
+import meraki
+from meraki.exceptions import APIError
+from django.conf import settings
 
 
 def startresync(request):
@@ -21,7 +24,6 @@ def startresync(request):
 
 
 def delobject(request):
-    # /del/policy/64c6515b-e32f-476d-a043-20924f1ed560
     pathlist = request.path.split("/")
     if len(pathlist) == 4:
         if pathlist[2] == "sgt":
@@ -35,12 +37,6 @@ def delobject(request):
 
 
 def getmerakiorgs(request):
-    dashboards = Dashboard.objects.all()
-    if len(dashboards) > 0:
-        dashboard = dashboards[0]
-    else:
-        dashboard = None
-
     apikey = request.headers.get("X-Cisco-Meraki-API-Key")
     baseurl = request.headers.get("X-Cisco-Meraki-API-URL")
 
@@ -170,6 +166,12 @@ def setupmeraki(request):
     else:
         dashboard = None
 
+    organizations = Organization.objects.all()
+    if len(organizations) > 0:
+        organization = organizations[0]
+    else:
+        organization = None
+
     iseservers = ISEServer.objects.all()
     if len(iseservers) > 0:
         iseserver = iseservers[0]
@@ -197,7 +199,7 @@ def setupmeraki(request):
                 iseserver.pxgrid_isecert = server_cert[0]
                 iseserver.save()
 
-    return render(request, 'setup/meraki.html', {"active": 5, "data": dashboard})
+    return render(request, 'setup/meraki.html', {"active": 5, "data": dashboard, "org": organization})
 
 
 def setupsync(request):
@@ -225,10 +227,19 @@ def setupsync(request):
         if apikey and orgid:
             if dashboard:
                 dashboard.apikey = apikey
-                dashboard.orgid = orgid
+                # dashboard.orgid = orgid
+                orgs = Organization.objects.all()
+                if len(orgs) == 1:                      # If there is one organization selected, replace it
+                    orgs[0].orgid = orgid
+                    orgs[0].save()
+                else:                                   # Otherwise, if there are 0 or >1 orgs, add it
+                    o = Organization.objects.create(orgid=orgid)
+                    dashboard.organization.add(o)
                 dashboard.save()
             else:
-                Dashboard.objects.create(description="Meraki Dashboard", apikey=apikey, orgid=orgid, baseurl=apiurl)
+                o = Organization.objects.create(orgid=orgid)
+                d = Dashboard.objects.create(description="Meraki Dashboard", apikey=apikey, baseurl=apiurl)
+                d.organization.add(o)
 
     return render(request, 'setup/sync.html', {"active": 6, "data": sync, "default_sync": defsync})
 
@@ -305,12 +316,12 @@ def home(request):
     else:
         dashboard = None
 
-    meraki_sgts = Tag.objects.filter(sourced_from="meraki")
-    meraki_sgacls = ACL.objects.filter(sourced_from="meraki")
-    meraki_policies = Policy.objects.filter(sourced_from="meraki")
-    ise_sgts = Tag.objects.filter(sourced_from="ise")
-    ise_sgacls = ACL.objects.filter(sourced_from="ise")
-    ise_policies = Policy.objects.filter(sourced_from="ise")
+    meraki_sgts = Tag.objects.filter(origin_org__isnull=False)
+    meraki_sgacls = ACL.objects.filter(origin_org__isnull=False)
+    meraki_policies = Policy.objects.filter(origin_org__isnull=False)
+    ise_sgts = Tag.objects.filter(origin_ise__isnull=False)
+    ise_sgacls = ACL.objects.filter(origin_ise__isnull=False)
+    ise_policies = Policy.objects.filter(origin_ise__isnull=False)
 
     e_meraki_sgts = []
     e_meraki_sgacls = []
@@ -466,13 +477,13 @@ def sgaclstatus(request):
             desc = sgacl.name
             crumbs = '''
                 <li class="current">Status</li>
-                <li><a href="/home/status-sgacl">SGACLs</a></li>
+                <li><a href="/home/status-sgacl">ACLs</a></li>
                 <li class="current">''' + desc + '''</li>
             '''
             return render(request, 'home/showsgacl.html', {"crumbs": crumbs, "menuopen": 1, "data": sgacl})
 
     sgacls = ACL.objects.filter(visible=True).order_by("-do_sync")
-    crumbs = '<li class="current">Status</li><li class="current">SGACLs</li>'
+    crumbs = '<li class="current">Status</li><li class="current">ACLs</li>'
     return render(request, 'home/sgaclstatus.html', {"crumbs": crumbs, "menuopen": 1, "data": {"sgacl": sgacls}})
 
 
@@ -498,6 +509,75 @@ def policystatus(request):
     return render(request, 'home/policystatus.html', {"crumbs": crumbs, "menuopen": 1, "data": {"policy": policies}})
 
 
+def sgtdata(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    pk = request.GET.get("id")
+    if pk:
+        sgts = TagData.objects.filter(id=pk)
+        if len(sgts) == 1:
+            sgt = sgts[0]
+            desc = sgt.tag.name + " (" + str(sgt.tag.tag_number) + ")"
+            ddesc = str(sgt.iseserver) if sgt.iseserver else \
+                str(sgt.organization)
+            crumbs = '''
+                <li class="current">Status</li>
+                <li><a href="/home/status-sgt">SGTs</a></li>
+                <li><a href="/home/status-sgt?id=''' + str(sgt.tag.id) + '''">''' + desc + '''</a></li>
+                <li class="current">''' + ddesc + '''</li>
+            '''
+            return render(request, 'home/showsgtdata.html', {"crumbs": crumbs, "menuopen": 1, "data": sgt})
+
+    return redirect(reverse('sgtstatus'))
+
+
+def sgacldata(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    pk = request.GET.get("id")
+    if pk:
+        sgacls = ACLData.objects.filter(id=pk)
+        if len(sgacls) == 1:
+            sgacl = sgacls[0]
+            desc = sgacl.acl.name
+            ddesc = str(sgacl.iseserver) if sgacl.iseserver else \
+                str(sgacl.organization)
+            crumbs = '''
+                <li class="current">Status</li>
+                <li><a href="/home/status-sgacl">ACLs</a></li>
+                <li><a href="/home/status-sgacl?id=''' + str(sgacl.acl.id) + '''">''' + desc + '''</a></li>
+                <li class="current">''' + ddesc + '''</li>
+            '''
+            return render(request, 'home/showsgacldata.html', {"crumbs": crumbs, "menuopen": 1, "data": sgacl})
+
+    return redirect(reverse('sgaclstatus'))
+
+
+def policydata(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    pk = request.GET.get("id")
+    if pk:
+        policies = PolicyData.objects.filter(id=pk)
+        if len(policies) == 1:
+            policy = policies[0]
+            desc = policy.policy.name + " (" + str(policy.policy.mapping) + ")"
+            ddesc = str(policy.iseserver) if policy.iseserver else \
+                str(policy.organization)
+            crumbs = '''
+                <li class="current">Status</li>
+                <li><a href="/home/status-policy">Policies</a></li>
+                <li><a href="/home/status-policy?id=''' + str(policy.policy.id) + '''">''' + desc + '''</a></li>
+                <li class="current">''' + ddesc + '''</li>
+            '''
+            return render(request, 'home/showpolicydata.html', {"crumbs": crumbs, "menuopen": 1, "data": policy})
+
+    return redirect(reverse('policystatus'))
+
+
 def certconfig(request):
     if not request.user.is_authenticated:
         return redirect('/login')
@@ -508,6 +588,31 @@ def certconfig(request):
     crumbs = '<li class="current">Configuration</li><li class="current">Certificates</li>'
     return render(request, 'home/certconfig.html', {"crumbs": crumbs, "menuopen": 2,
                                                     "data": {"zip": uploadzip, "file": upload}})
+
+
+def certupload(request):
+    if not request.user.is_authenticated:
+        return redirect('/login')
+
+    form = UploadForm(request.POST or None, request.FILES or None)
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            return redirect(reverse("certconfig"))
+    else:
+        act = request.GET.get("action")
+        cert_id = request.GET.get("id")
+        if act == "delzip" and cert_id:
+            UploadZip.objects.filter(id=cert_id).delete()
+            return redirect(reverse("certconfig"))
+
+    crumbs = '''
+        <li class="current">Configuration</li>
+        <li><a href="/home/config-cert">Certificates</a></li>
+        <li class="current">Upload</li>
+    '''
+
+    return render(request, 'home/cert_upload.html', {"crumbs": crumbs, "form": form, "menuopen": 2})
 
 
 def backuprestore(request):
@@ -545,42 +650,184 @@ def iseconfig(request):
     if not request.user.is_authenticated:
         return redirect('/login')
 
+    if request.method == 'POST':
+        postvars = request.POST
+        idlist = []
+        for v in postvars:
+            if "intDesc-" in v:
+                vid = v.replace("intDesc-", "")
+                idlist.append(vid)
+
+        for itemid in idlist:
+            ise_desc = request.POST.get("intDesc-" + itemid)
+            ise_host = request.POST.get("intIP-" + itemid)
+            ise_user = request.POST.get("intUser-" + itemid)
+            ise_pswd = request.POST.get("intPass-" + itemid)
+            if ise_pswd.find("****") < 0:
+                ise_pass = ise_pswd
+            else:
+                ise_pass = None
+            ise_pxen = True if request.POST.get("intPxGrid-" + itemid) else False
+            ise_pxip = request.POST.get("intPxIP-" + itemid)
+            ise_pxcn = request.POST.get("intPxClName-" + itemid)
+            ise_pxcc = request.POST.get("clientcert-id-" + itemid)
+            ise_pxck = request.POST.get("clientkey-id-" + itemid)
+            ise_pxcp = request.POST.get("intPxClPass-" + itemid)
+            ise_pxsc = request.POST.get("servercert-id-" + itemid)
+            ise_rbld = True if request.POST.get("intRebuild-" + itemid) else False
+            crt_pxcc = Upload.objects.filter(id=ise_pxcc) if ise_pxcc else ""
+            crt_pxck = Upload.objects.filter(id=ise_pxck) if ise_pxck else ""
+            crt_pxsc = Upload.objects.filter(id=ise_pxsc) if ise_pxsc else ""
+            if len(crt_pxcc) == 1 and len(crt_pxck) == 1 and len(crt_pxsc) == 1:
+                crt_pxcc = crt_pxcc[0]
+                crt_pxck = crt_pxck[0]
+                crt_pxsc = crt_pxsc[0]
+
+            if itemid == "new":
+                ISEServer.objects.create(description=ise_desc, ipaddress=ise_host, username=ise_user, password=ise_pass,
+                                         pxgrid_enable=ise_pxen, pxgrid_ip=ise_pxip, pxgrid_cliname=ise_pxcn,
+                                         pxgrid_clicert=crt_pxcc, pxgrid_clikey=crt_pxck, pxgrid_clipw=ise_pxcp,
+                                         pxgrid_isecert=crt_pxsc, force_rebuild=True)
+            else:
+                if ise_pass:
+                    ISEServer.objects.filter(id=itemid).update(description=ise_desc, ipaddress=ise_host,
+                                                               username=ise_user, password=ise_pass,
+                                                               pxgrid_enable=ise_pxen, pxgrid_ip=ise_pxip,
+                                                               pxgrid_cliname=ise_pxcn, pxgrid_clicert=crt_pxcc,
+                                                               pxgrid_clikey=crt_pxck, pxgrid_clipw=ise_pxcp,
+                                                               pxgrid_isecert=crt_pxsc, force_rebuild=ise_rbld)
+                else:
+                    ISEServer.objects.filter(id=itemid).update(description=ise_desc, ipaddress=ise_host,
+                                                               username=ise_user,
+                                                               pxgrid_enable=ise_pxen, pxgrid_ip=ise_pxip,
+                                                               pxgrid_cliname=ise_pxcn, pxgrid_clicert=crt_pxcc,
+                                                               pxgrid_clikey=crt_pxck, pxgrid_clipw=ise_pxcp,
+                                                               pxgrid_isecert=crt_pxsc, force_rebuild=ise_rbld)
+
     iseservers = ISEServer.objects.all()
-    if len(iseservers) > 0:
-        iseserver = iseservers[0]
-    else:
-        iseserver = None
+    if len(iseservers) == 0:
+        iseservers = [{"id": "new"}]
+    certs = Upload.objects.all()
 
     crumbs = '<li class="current">Configuration</li><li class="current">ISE Server</li>'
-    return render(request, 'home/iseconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": iseserver})
+    return render(request, 'home/iseconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": iseservers,
+                                                   "certs": certs})
 
 
 def merakiconfig(request):
     if not request.user.is_authenticated:
         return redirect('/login')
 
-    dashboards = Dashboard.objects.all()
-    if len(dashboards) > 0:
-        dashboard = dashboards[0]
+    if request.method == 'POST':
+        if request.GET.get("action") == "addorg":
+            postvars = request.POST
+            idlist = []
+            for v in postvars:
+                if "org-id-" in v:
+                    vid = v.replace("org-id-", "")
+                    idlist.append(vid)
+
+            for itemid in idlist:
+                db = Dashboard.objects.filter(id=itemid)
+                orgid = request.POST.get("org-id-" + itemid)
+
+                if len(db) == 1 and orgid:
+                    if orgid not in db[0].organization.all():
+                        neworg = Organization.objects.create(orgid=orgid)
+                        db[0].organization.add(neworg)
+        else:
+            postvars = request.POST
+            idlist = []
+            for v in postvars:
+                if "intDesc-" in v:
+                    vid = v.replace("intDesc-", "")
+                    idlist.append(vid)
+
+            for itemid in idlist:
+                dash_desc = request.POST.get("intDesc-" + itemid)
+                dash_aurl = request.POST.get("intURL-" + itemid)
+                dash_akey = request.POST.get("intKey-" + itemid)
+                if dash_akey.find("****") < 0:
+                    dash_apik = dash_akey
+                else:
+                    dash_apik = None
+
+                if itemid == "new":
+                    Dashboard.objects.create(description=dash_desc, baseurl=dash_aurl, apikey=dash_apik)
+                else:
+                    if dash_apik:
+                        Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl,
+                                                                   apikey=dash_apik)
+                    else:
+                        Dashboard.objects.filter(id=itemid).update(description=dash_desc, baseurl=dash_aurl)
     else:
-        dashboard = None
+        orgid = request.GET.get("id")
+        if request.GET.get("action") == "delorg" and orgid:
+            Organization.objects.filter(id=orgid).delete()
+
+    dashboards = Dashboard.objects.all()
+    for dashboard in dashboards:
+        if dashboard.baseurl and dashboard.apikey and dashboard.apikey != "":
+            try:
+                db = meraki.DashboardAPI(base_url=dashboard.baseurl, api_key=dashboard.apikey, print_console=False,
+                                         output_log=False, caller=settings.CUSTOM_UA, suppress_logging=True)
+                orgs = db.organizations.getOrganizations()
+                dashboard.raw_data = orgs
+                dashboard.save()
+            except APIError:
+                dashboard.apikey = ""
+                dashboard.save()
+    if len(dashboards) == 0:
+        dashboards = [{"id": "new"}]
 
     crumbs = '<li class="current">Configuration</li><li class="current">Meraki Dashboard</li>'
-    return render(request, 'home/merakiconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": dashboard})
+    return render(request, 'home/merakiconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": dashboards})
 
 
 def syncconfig(request):
     if not request.user.is_authenticated:
         return redirect('/login')
 
+    if request.method == 'POST':
+        postvars = request.POST
+        idlist = []
+        for v in postvars:
+            if "intDesc-" in v:
+                vid = v.replace("intDesc-", "")
+                idlist.append(vid)
+
+        for itemid in idlist:
+            sync_desc = request.POST.get("intDesc-" + itemid)
+            sync_isvr = request.POST.get("iseserver-id-" + itemid)
+            sync_dash = request.POST.get("dashboard-id-" + itemid)
+            opt_sorc = request.POST.get("src-" + itemid)
+            sync_sorc = True if opt_sorc == "ise" else False
+            opt_rbld = request.POST.get("intRebuild-" + itemid)
+            sync_rbld = True if opt_rbld else False
+            opt_sync = request.POST.get("intSync-" + itemid)
+            sync_sync = True if opt_sync else False
+            opt_aply = request.POST.get("intApply-" + itemid)
+            sync_aply = True if opt_aply else False
+            sync_itvl = request.POST.get("intInterval-" + itemid)
+            if itemid == "new":
+                SyncSession.objects.create(description=sync_desc, iseserver=sync_isvr, dashboard=sync_dash,
+                                           ise_source=sync_sorc, force_rebuild=sync_rbld, sync_enabled=sync_sync,
+                                           apply_changes=sync_aply, sync_interval=sync_itvl)
+            else:
+                SyncSession.objects.filter(id=itemid).update(description=sync_desc, iseserver=sync_isvr,
+                                                             dashboard=sync_dash, ise_source=sync_sorc,
+                                                             force_rebuild=sync_rbld, sync_enabled=sync_sync,
+                                                             apply_changes=sync_aply, sync_interval=sync_itvl)
+
     syncs = SyncSession.objects.all()
-    if len(syncs) > 0:
-        sync = syncs[0]
-    else:
-        sync = None
+    if len(syncs) == 0:
+        syncs = [{"id": "new"}]
+    iseservers = ISEServer.objects.all()
+    dashboards = Dashboard.objects.all()
 
     crumbs = '<li class="current">Configuration</li><li class="current">Synchronization</li>'
-    return render(request, 'home/syncconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": sync})
+    return render(request, 'home/syncconfig.html', {"crumbs": crumbs, "menuopen": 2, "data": syncs,
+                                                    "iseservers": iseservers, "dashboards": dashboards})
 
 
 class MyLoginView(auth_views.LoginView):

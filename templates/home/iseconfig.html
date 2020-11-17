@@ -2,33 +2,299 @@
 {% load extras %}
 
 {% block content %}
-    <div class="md-data-table" style="width: 100%;">
-        <div class="md-data-table__wrapper">
-            <table class="testTableClass">
-                <thead class="md-data-table__thead">
-                    <tr>
-                        <th style="width: 8rem">Field</th>
-                        <th style="width: 32rem">Value</th>
-                    </tr>
-                </thead>
-                <tbody class="md-data-table__tbody">
-                    <tr><td>Description</td><td>{{ data.description }}</td></tr>
-                    <tr><td>ISE IP or FQDN</td><td>{{ data.ipaddress }}</td></tr>
-                    <tr><td>ISE ERS Username</td><td>{{ data.username }}</td></tr>
-                    <tr><td>ISE ERS Password</td><td>{{ data.password }}</td></tr>
-                    <tr><td>ISE Raw Data</td><td><pre>{{ data.raw_data|pretty_json|safe }}</pre></td></tr>
-                    <tr><td>Use pxGrid</td><td>{{ data.pxgrid_enable }}</td></tr>
-                    <tr><td>pxGrid IP or FQDN</td><td>{{ data.pxgrid_ip }}</td></tr>
-                    <tr><td>pxGrid Client Name</td><td>{{ data.pxgrid_cliname }}</td></tr>
-                    <tr><td>pxGrid Client Cert</td><td>{{ data.pxgrid_clicert }}</td></tr>
-                    <tr><td>pxGrid Client Key</td><td>{{ data.pxgrid_clikey }}</td></tr>
-                    <tr><td>pxGrid Cert Password</td><td>{{ data.pxgrid_clipw }}</td></tr>
-                    <tr><td>pxGrid Server Cert</td><td>{{ data.pxgrid_isecert }}</td></tr>
-                    <tr><td>Force Manual Sync</td><td>{{ data.force_rebuild }}</td></tr>
-                    <tr><td>Last Database Update</td><td>{{ data.last_update }}</td></tr>
-                    <tr><td>Last Sync</td><td>{{ data.last_sync }}</td></tr>
-                </tbody>
-            </table>
+    <form method="POST" action="/home/config-ise" style="width:100%;padding:0px">
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                ISE Configuration  <a onclick="getLog('{{ data.0.raw_data }}')"><span class="icon icon-file-text_24"></span></a>
+                <table class="testTableClass">
+                    <tbody class="md-data-table__tbody">
+                    {% for i in data %}
+                        <tr>
+                            <td style="width: 4rem">Description</td>
+                            <td style="width: 24rem">
+                                <div class="md-input__wrapper">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intDesc-{{ i.id }}" name="intDesc-{{ i.id }}" placeholder="ISE Server Description" value="{{ i.description|default_if_none:'' }}">
+                                    <span class="md-input__after">
+                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intDesc')">
+                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">ISE IP or FQDN</td>
+                            <td style="width: 24rem">
+                                <div class="md-input__wrapper">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intIP-{{ i.id }}" name="intIP-{{ i.id }}" placeholder="ISE IP or FQDN" value="{{ i.ipaddress|default_if_none:'' }}">
+                                    <span class="md-input__after">
+                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intIP')">
+                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">Username</td>
+                            <td style="width: 24rem">
+                                <div class="md-input__wrapper">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intUser-{{ i.id }}" name="intUser-{{ i.id }}" placeholder="ISE Username" value="{{ i.username|default_if_none:'' }}">
+                                    <span class="md-input__after">
+                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intUser')">
+                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">Password</td>
+                            <td style="width: 24rem">
+                                <div class="md-input__wrapper">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intPass-{{ i.id }}" name="intPass-{{ i.id }}" placeholder="ISE Password" value="{{ i.password|default_if_none:''|password }}">
+                                    <span class="md-input__after">
+                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intPass')">
+                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">pxGrid Support</td>
+                            <td style="width: 24rem">
+                                <div class="md-input-container md-checkbox">
+                                    {% if i.pxgrid_enable %}
+                                        <input name="intPxGrid-{{ i.id }}" id="intPxGrid-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input" checked>
+                                    {% else %}
+                                        <input name="intPxGrid-{{ i.id }}" id="intPxGrid-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input">
+                                    {% endif %}
+                                    <label class="md-checkbox__label" for="intPxGrid-{{ i.id }}">
+                                        <span>Enabled</span>
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">pxGrid Node IP/FQDN</td>
+                            <td style="width: 24rem">
+                                <div class="md-input__wrapper">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intPxIP-{{ i.id }}" name="intPxIP-{{ i.id }}" placeholder="pxGrid Node IP/FQDN" value="{{ i.pxgrid_ip|default_if_none:'' }}">
+                                    <span class="md-input__after">
+                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intPxIP')">
+                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">pxGrid Client Name</td>
+                            <td style="width: 24rem">
+                                <div class="md-input__wrapper">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intPxClName-{{ i.id }}" name="intPxClName-{{ i.id }}" placeholder="pxGrid Client Name" value="{{ i.pxgrid_cliname|default_if_none:'' }}">
+                                    <span class="md-input__after">
+                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intPxClName')">
+                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">pxGrid Client Cert (.cer)</td>
+                            <td style="width: 24rem">
+                                <div class="md-input-container columns medium-12" id="clientcert-container">
+                                    <div class="md-input__wrapper md-select">
+                                        <button id="clientcert-button-{{ i.id }}" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="clientcert-label-{{ i.id }}" tabindex="30" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('clientcert-button-{{ i.id }}', 'clientcert-dropdown-{{ i.id }}', 'clientcert-list-{{ i.id }}')">
+                                            <span class="ignore md-button__children" style="opacity: 1;">
+                                                <div style="font-size: small" class="ignore md-list-item__left" id="clientcert-label-{{ i.id }}">
+                                                    {% if i.pxgrid_clicert %}
+                                                        {{ i.pxgrid_clicert.file }}
+                                                    {% else %}
+                                                        None
+                                                    {% endif %}
+                                                    <i class="ignore icon icon-arrow-down_16"></i>
+                                                </div>
+                                            </span>
+                                        </button>
+                                        <div class="md-event-overlay md-event-overlay--bottom" id="clientcert-dropdown-{{ i.id }}" style="display:none;">
+                                            <div class="md-event-overlay__children" id="clientcert-list-{{ i.id }}">
+                                                <div id="clientcert-content" class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                                    {% for cert in certs %}
+                                                    <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="0" title="{{ cert.file }}">
+                                                        <div style="font-size: small" class="md-list-item__center" onclick="listclick('{{ cert.id }}', '{{ cert.file }}', 'clientcert-label-{{ i.id }}', 'clientcert-id-{{ i.id }}', 'clientcert-name-{{ i.id }}', '')">{{ cert.file }}</div>
+                                                        <div class="md-list-item__right"></div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="clientcert-id-{{ i.id }}" name="clientcert-id-{{ i.id }}" value="{{ i.pxgrid_clicert.id }}" />
+                                <input type="hidden" id="clientcert-name-{{ i.id }}" name="clientcert-name-{{ i.id }}" value="" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">pxGrid Client Key (.key)</td>
+                            <td style="width: 24rem">
+                                <div class="md-input-container columns medium-12" id="clientkey-container">
+                                    <div class="md-input__wrapper md-select">
+                                        <button id="clientkey-button-{{ i.id }}" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="clientkey-label-{{ i.id }}" tabindex="30" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('clientkey-button-{{ i.id }}', 'clientkey-dropdown-{{ i.id }}', 'clientkey-list-{{ i.id }}')">
+                                            <span class="ignore md-button__children" style="opacity: 1;">
+                                                <div style="font-size: small" class="ignore md-list-item__left" id="clientkey-label-{{ i.id }}">
+                                                    {% if i.pxgrid_clikey %}
+                                                        {{ i.pxgrid_clikey.file }}
+                                                    {% else %}
+                                                        None
+                                                    {% endif %}
+                                                    <i class="ignore icon icon-arrow-down_16"></i>
+                                                </div>
+                                            </span>
+                                        </button>
+                                        <div class="md-event-overlay md-event-overlay--bottom" id="clientkey-dropdown-{{ i.id }}" style="display:none;">
+                                            <div class="md-event-overlay__children" id="clientkey-list-{{ i.id }}">
+                                                <div id="clientkey-content" class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                                    {% for cert in certs %}
+                                                    <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="0" title="{{ cert.file }}">
+                                                        <div style="font-size: small" class="md-list-item__center" onclick="listclick('{{ cert.id }}', '{{ cert.file }}', 'clientkey-label-{{ i.id }}', 'clientkey-id-{{ i.id }}', 'clientkey-name-{{ i.id }}', '')">{{ cert.file }}</div>
+                                                        <div class="md-list-item__right"></div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="clientkey-id-{{ i.id }}" name="clientkey-id-{{ i.id }}" value="{{ i.pxgrid_clikey.id }}" />
+                                <input type="hidden" id="clientkey-name-{{ i.id }}" name="clientkey-name-{{ i.id }}" value="" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">pxGrid Cert Password</td>
+                            <td style="width: 24rem">
+                                <div class="md-input__wrapper">
+                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intPxClPass-{{ i.id }}" name="intPxClPass-{{ i.id }}" placeholder="pxGrid Cert Password" value="{{ i.pxgrid_clipw|default_if_none:''|password }}">
+                                    <span class="md-input__after">
+                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intPxClPass')">
+                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                        </button>
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">pxGrid Server Cert (.cer)</td>
+                            <td style="width: 24rem">
+                                <div class="md-input-container columns medium-12" id="servercert-container">
+                                    <div class="md-input__wrapper md-select">
+                                        <button id="servercert-button-{{ i.id }}" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="servercert-label-{{ i.id }}" tabindex="30" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('servercert-button-{{ i.id }}', 'servercert-dropdown-{{ i.id }}', 'servercert-list-{{ i.id }}')">
+                                            <span class="ignore md-button__children" style="opacity: 1;">
+                                                <div style="font-size: small" class="ignore md-list-item__left" id="servercert-label-{{ i.id }}">
+                                                    {% if i.pxgrid_isecert %}
+                                                        {{ i.pxgrid_isecert.file }}
+                                                    {% else %}
+                                                        None
+                                                    {% endif %}
+                                                    <i class="ignore icon icon-arrow-down_16"></i>
+                                                </div>
+                                            </span>
+                                        </button>
+                                        <div class="md-event-overlay md-event-overlay--bottom" id="servercert-dropdown-{{ i.id }}" style="display:none;">
+                                            <div class="md-event-overlay__children" id="servercert-list-{{ i.id }}">
+                                                <div id="servercert-content" class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                                    {% for cert in certs %}
+                                                    <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="0" title="{{ cert.file }}">
+                                                        <div style="font-size: small" class="md-list-item__center" onclick="listclick('{{ cert.id }}', '{{ cert.file }}', 'servercert-label-{{ i.id }}', 'servercert-id-{{ i.id }}', 'servercert-name-{{ i.id }}', '')">{{ cert.file }}</div>
+                                                        <div class="md-list-item__right"></div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="servercert-id-{{ i.id }}" name="servercert-id-{{ i.id }}" value="{{ i.pxgrid_isecert.id }}" />
+                                <input type="hidden" id="servercert-name-{{ i.id }}" name="servercert-name-{{ i.id }}" value="" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">Force Re-sync</td>
+                            <td style="width: 24rem">
+                                <div class="md-input-container md-checkbox">
+                                    {% if i.force_rebuild %}
+                                        <input name="intRebuild-{{ i.id }}" id="intRebuild-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input" checked>
+                                    {% else %}
+                                        <input name="intRebuild-{{ i.id }}" id="intRebuild-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input">
+                                    {% endif %}
+                                    <label class="md-checkbox__label" for="intRebuild-{{ i.id }}">
+                                        <span>Enabled</span>
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">Last Update</td>
+                            <td style="width: 24rem">
+                                {{ i.last_update }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 4rem">Last Sync</td>
+                            <td style="width: 24rem">
+                                {{ i.last_sync }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row">&nbsp;</div>
+        <div id="bottom_save">
+            <div class="md-panel md-panel__form" style="width:100%;padding:0px">
+                {% csrf_token %}
+                <div class="md-input-group" style="width:100%;padding:20px;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
+                    <div class="md-input__icon-container">
+                        <div class="row" style="align-content:center; display:flex">
+                            <div class="md-input-container columns medium-6">
+                                <div class="md-input__wrapper">
+                                    <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="/home/config-ise">cancel</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <script>
+    function getLog(data) {
+        let new_dat = data.replaceAll("\"", '"').replaceAll("\n", "\\n");
+        document.getElementById("logdata").innerHTML = "<pre>" + JSON.stringify(JSON.parse(new_dat), null, 4) + "</pre>";
+        document.getElementById("logmodal").style = "display:inline;";
+    }
+    </script>
+
+    <div id="logmodal" class="md-modal__backdrop fade in" style="display:none; width: 100px;height: 50px;position:fixed; top: calc(50% - 25px);left: calc(50% - 50px);">
+        <div role="dialog" id="react-aria-modal-dialog" class="md-modal md-modal--default in" aria-labelledby="modal1">
+            <div class="md-modal__content">
+                <div class="md-modal__flex-container">
+                    <div class="md-modal__header">
+                        <span class="md-modal__title">ISE Server Data</span>
+                        <button type="button" class="md-close md-modal__close" onclick="document.getElementById('logmodal').style = 'display:none;'"></button>
+                    </div>
+                    <div id="logdata" class="md-modal__body"><form></form></div>
+                    <div class="md-modal__footer">
+                        <button class="md-button md-button--36 md-button--blue" alt="Submit Form" type="button" aria-label="Submit Form">
+                            <span class="md-button__children" onclick="document.getElementById('logmodal').style = 'display:none;'">OK</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 {% endblock %}

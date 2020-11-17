@@ -23,12 +23,12 @@
 
 #### Cisco ISE<a name="compatibility-ise"/> ([^ Top](#top))
 1) This tool has been tested with the following versions of Cisco ISE:
-    - ISE 2.4 - Patch 12
+    - ISE 2.4 - Patch 13
         - Caveat: pxGrid does not push SGACL updates, so these can only be captured via manual sync. (CSCvu35506)
-    - ISE 2.6 - Patch 6
+    - ISE 2.6 - Patch 7
         - Caveat: pxGrid does not push SGACL updates, so these can only be captured via manual sync. (CSCvu35506)
-    - ISE 2.7 - Patch 1
-    - ISE 3.0 Beta
+    - ISE 2.7 - Patch 2
+    - ISE 3.0 - Release
 
 #### Cisco Meraki<a name="compatibility-meraki"/> ([^ Top](#top))
 1) See [this article](https://documentation.meraki.com/zGeneral_Administration/Cross-Platform_Content/Adaptive_Policy/Adaptive_Policy_Overview#Adaptive_Policy_requirements) for Cisco Meraki requirements.
@@ -38,15 +38,27 @@
     - [Unit Tests](https://htmlpreview.github.io/?https://github.com/meraki/adaptive-policy-ise-sync/blob/master/pytest_report.html)
 2) Current Code Coverage:
     - [Test Coverage](https://htmlpreview.github.io/?https://github.com/meraki/adaptive-policy-ise-sync/blob/master/htmlcov/index.html)
-3) To Do:
-    - ~~Add sample objects to Dashboard to better test sync from Dashboard -> ISE~~
-    - ~~Test Component Update on non-authoritative source (should be reverted)~~
-    - ~~Test Component Deletes on authoritative source (should propegate)~~
-    - ~~Test Component Deletes on non-authoritative source (should be reverted)~~
-    - ~~Test UI~~
-    - Test pxGrid
-    - Test API
-        
+3) Unit Test Summary:
+<pre>
+    - test_ise_dashboard_unable_to_sync_first   With ISE set to Authoritative Source, Dashboard should be unable to sync first
+    - test_ise_iseserver_can_sync               With ISE set to Authoritative Source, ISE should be able to sync first
+    - test_ise_dashboard_can_sync_next          With ISE set to Authoritative Source, Dashboard should be able to sync after ISE
+    - test_dashboard_ise_unable_to_sync_first   With Meraki Dashboard set to Authoritative Source, ISE should be unable to sync first
+    - test_dashboard_can_sync                   With Meraki Dashboard set to Authoritative Source, Dashboard should be able to sync first
+    - test_dashboard_ise_can_sync_next          With Meraki Dashboard set to Authoritative Source, ISE should be able to sync after Dashboard
+    - test_sgts_in_database                     Expected SGTs must have Dashboard and ISE IDs in the DB; Default SGTs must have ISE IDs in the DB
+    - test_sgacls_in_database                   Expected SGACLs must have ISE IDs in the DB; Default SGACLs must have ISE IDs in the DB
+    - test_policies_in_database                 Expected Policies must have ISE IDs in the DB; Default Policies must have ISE IDs in the DB
+    - test_ise_sync_success                     Perform a full sync and ensure SGTs, SGACLs and Policies have synced correctly
+    - test_update_element_success               Perform a full sync and then update each side for SGT, SGACL and Policy - change should replicate correctly
+    - test_update_element_revert                Perform a full sync and then update wrong side for SGT, SGACL and Policy - change should get reverted
+    - test_delete_element_success               Perform a full sync and then delete SGT, SGACL and Policy from each side - delete should replicate correctly
+    - test_delete_element_revert                Perform a full sync and then delete SGT, SGACL and Policy from each non-auth side - delete should get reverted
+    - PXGridTests                               Configure environment and sync, set SGTs to sync, sync again. Perform updates to SGT/SGACL/EgressPolicy, verify changes propegate via pxGri.
+    - APITests                                  Configure environment via API and sync, then set SGTs to sync via API. Verify changes replicate correctly. Test multiple Dashboard Orgs when ISE is auth source.
+    - BrowserTests                              Configure environment via AdP Sync Setup process and sync, then set SGTs to sync via UI. Verify changes replicate correctly.
+</pre> 
+       
 ### Set up your environment
 
 #### Meraki Dashboard<a name="configure-dashboard"/> ([^ Top](#top))
@@ -151,10 +163,15 @@ python manage.py runserver 8000
 * Above, you generated a new API token. You can use it with the API by passing it as an Authorization header as a Bearer token (Authorization: Bearer 1234567890abcdefghijklmnopqrstuvwxyz1234).
 
 #### Integrating Meraki Dashboard
-1) Add your Dashboard Organization to Adaptive Policy Sync using the following API call. You will need to provide your Meraki Dashboard API key and the [Organization ID](https://dashboard.meraki.com/api_docs/v0#list-the-organizations-that-the-user-has-privileges-on) that you would like to connect to Adapative Policy sync.
+1) Add your Dashboard Organization to Adaptive Policy Sync using the following API call. You will need to provide your [Organization ID](https://dashboard.meraki.com/api_docs/v0#list-the-organizations-that-the-user-has-privileges-on) that you would like to connect to Adapative Policy sync.
     ```
-    curl -L -H "Authorization: Bearer 1234567890abcdefghijklmnopqrstuvwxyz1234" -H 'Content-Type: application/json' -X POST --data-binary '{"description": "My Meraki Dashboard","apikey": "1234567890abcdefghijklmnopqrstuvwxyz1234","orgid": "1234567890","webhook_enable": true,"webhook_ngrok": true,"webhook_url": ""}' http://127.0.0.1:8000/api/v0/dashboard/
-    {"id":"11112222-3333-4444-5555-666677778888","url":"http://127.0.0.1:8000/api/v0/dashboard/11112222-3333-4444-5555-666677778888/","description":"My Meraki Dashboard","baseurl":"https://api.meraki.com/api/v0","apikey":"1234567890abcdefghijklmnopqrstuvwxyz1234","orgid":"1234567890","force_rebuild":false,"skip_sync":false,"last_update":"2020-04-14T21:54:56.614206Z","last_sync":null,"webhook_enable":true,"webhook_ngrok":true,"webhook_url":""}
+    curl -L -H "Authorization: Bearer 1234567890abcdefghijklmnopqrstuvwxyz1234" -H 'Content-Type: application/json' -X POST --data-binary '{"orgid": "1234567890"}' http://127.0.0.1:8000/api/v0/organization/
+    {"id":"11112222-3333-4444-5555-666677778888","url":"http://127.0.0.1:8000/api/v0/organization/11112222-3333-4444-5555-666677778888/","orgid":"1234567890","force_rebuild":false,"skip_sync":false,"last_update":"2020-10-16T23:17:13.525068Z","last_sync":null}
+    ```
+2) Add your Meraki Dashboard Instance to Adaptive Policy Sync using the following API call. You will need to provide your Meraki Dashboard API key that you would like to connect to Adapative Policy sync.
+    ```
+    curl -L -H "Authorization: Bearer 1234567890abcdefghijklmnopqrstuvwxyz1234" -H 'Content-Type: application/json' -X POST --data-binary '{"description": "My Meraki Dashboard","apikey": "1234567890abcdefghijklmnopqrstuvwxyz1234","webhook_enable": true,"webhook_ngrok": true,"webhook_url": "","organization":["11112222-3333-4444-5555-666677778888"]}' http://127.0.0.1:8000/api/v0/dashboard/
+    {"id":"11112222-3333-4444-5555-666677778888","url":"http://127.0.0.1:8000/api/v0/dashboard/11112222-3333-4444-5555-666677778888/","description":"My Meraki Dashboard","baseurl":"https://api.meraki.com/api/v1","apikey":"1234567890abcdefghijklmnopqrstuvwxyz1234","organization":["11112222-3333-4444-5555-666677778888"],"force_rebuild":false,"last_update":"2020-10-16T23:19:06.267462Z","last_sync":null,"webhook_enable":true,"webhook_ngrok":true,"webhook_url":""}
     ```
 
 #### Integrating Cisco ISE (without pxGrid)

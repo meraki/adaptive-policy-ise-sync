@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class StompFrame:
     def __init__(self):
         self.headers = {}
@@ -23,6 +28,7 @@ class StompFrame:
         self.headers[key] = value
 
     def write(self, out):
+        logger.debug('write')
         out.write(self.command)
         out.write('\n')
         for key in self.headers:
@@ -36,14 +42,16 @@ class StompFrame:
         out.write('\0')
 
     @staticmethod
-    def parse(datainput):
+    def parse(input):
+        logger.debug('parse')
         frame = StompFrame()
-        frame.command = datainput.readline().rstrip('\r\n')
-        for line in datainput:
+        frame.command = input.readline().rstrip('\r\n')
+        for line in input:
             line = line.rstrip('\r\n')
             if line == '':
                 break
             (name, value) = line.split(':')
             frame.headers[name] = value
-        frame.content = datainput.read()[:-1]
+        frame.content = input.read()[:-1]
+        logger.debug('parse frame content: %s', frame.content)
         return frame
