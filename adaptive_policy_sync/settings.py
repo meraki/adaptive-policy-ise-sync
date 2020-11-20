@@ -79,14 +79,14 @@ WSGI_APPLICATION = 'adaptive_policy_sync.wsgi.application'
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 DATABASES = {
-    'default_mysql': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'apsync',
-        'USER': 'apsync',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '',
-    },
+    # 'default_mysql': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': 'apsync',
+    #     'USER': 'apsync',
+    #     'PASSWORD': 'password',
+    #     'HOST': 'localhost',
+    #     'PORT': '',
+    # },
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
