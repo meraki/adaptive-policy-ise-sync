@@ -19,6 +19,6 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] &&
     echo "2) API Key: (not required; enter anything)"
     echo "===================================================="
 fi
-(python manage.py runscript tasks) &
+(cd adaptive_policy_sync; python manage.py runscript tasks) &
 (cd adaptive_policy_sync; gunicorn adaptive_policy_sync.wsgi --user www-data --bind 0.0.0.0:8010 --workers 3 --preload) &
 nginx -g "daemon off;"
