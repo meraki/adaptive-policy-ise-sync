@@ -124,6 +124,7 @@ Superuser created successfully.
 python manage.py drf_create_token admin
 Generated token 1234567890abcdefghijklmnopqrstuvwxyz1234 for user admin
 
+python manage.py runscript tasks &
 python manage.py runserver 8000
 ```
 
