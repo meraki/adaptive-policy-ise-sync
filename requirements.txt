@@ -4,7 +4,7 @@ asgiref==3.3.1
 async-timeout==3.0.1
 attrs==20.3.0
 billiard==3.6.3.0
-certifi==2020.11.8
+certifi==2022.12.7
 chardet==3.0.4
 chromedriver==2.24.1
 colorama==0.4.4
