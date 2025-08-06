@@ -155,7 +155,11 @@ REST_FRAMEWORK = {
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
+# STATICFILES_FINDERS = [
+#     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+# ]
+# STATIC_ROOT = "/Users/joshanderson/code/adaptive-policy-ise-sync/static"
 
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"  # Default
-
-CUSTOM_UA = "Adaptive-Policy-Sync 1.1"
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 99999999
+CUSTOM_UA = "AdaptivePolicySync/1.1 joshand@cisco.com"

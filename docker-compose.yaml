@@ -1,0 +1,15 @@
+version: "3"
+services:
+  adaptivesync:
+    image: joshand/adaptive-policy-ise-sync:latest
+    container_name: adaptive_sync
+    environment:
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_PASSWORD=password
+      - DJANGO_SUPERUSER_EMAIL=admin@example.com
+      - DJANGO_SUPERUSER_APIKEY=1234567890abcdefghijklmnopqrstuvwxyz1234
+    volumes:
+      - ~/adaptivepolicy:/opt/app/adaptive_policy_sync/config
+    ports:
+      - 8000:8020
+    restart: unless-stopped

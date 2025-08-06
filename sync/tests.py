@@ -19,6 +19,7 @@ import json
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
 # from selenium.webdriver import Remote
 # from pytest_django.live_server_helper import LiveServer
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
@@ -1544,7 +1545,11 @@ class BrowserTests(StaticLiveServerTestCase):
         super().setUpClass()
         # cls.selenium = WebDriver()
         # cls.selenium = webdriver.Chrome()
-        cls.selenium = webdriver.Chrome(ChromeDriverManager().install())
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--disable-gpu')  # Last I checked this was necessary.
+        cls.selenium = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=options)
 
         cls.selenium.implicitly_wait(10)
 

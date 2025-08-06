@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # start-server.sh
+(cd adaptive_policy_sync; cd sync; mkdir migrations; cd migrations; touch __init__.py)
 (cd adaptive_policy_sync; python manage.py makemigrations --no-input; python manage.py migrate --no-input)
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] ; then
     (cd adaptive_policy_sync; python manage.py createsuperuser --no-input)
@@ -19,6 +20,8 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ] &&
     echo "2) API Key: (not required; enter anything)"
     echo "===================================================="
 fi
+(cd adaptive_policy_sync; python manage.py loaddata base_db.json)
+(cd adaptive_policy_sync; chown -R www-data:www-data *)
 (cd adaptive_policy_sync; python manage.py runscript tasks) &
-(cd adaptive_policy_sync; gunicorn adaptive_policy_sync.wsgi --user www-data --bind 0.0.0.0:8010 --workers 3 --preload) &
+(cd adaptive_policy_sync; gunicorn adaptive_policy_sync.wsgi --user www-data --bind 0.0.0.0:8010 --workers 1 --preload) &
 nginx -g "daemon off;"

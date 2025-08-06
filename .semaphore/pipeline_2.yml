@@ -11,9 +11,9 @@ blocks:
         - name: Build
           commands:
             - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
-            - 'docker pull $DOCKER_USERNAME/adaptive-policy-ise-sync:latest || true'
-            - 'docker build --cache-from=$DOCKER_USERNAME/adaptive-policy-ise-sync:latest -t $DOCKER_USERNAME/adaptive-policy-ise-sync:latest .'
-            - 'docker push $DOCKER_USERNAME/adaptive-policy-ise-sync:latest'
+            - 'docker pull $DOCKER_USERNAME/adaptive-policy-ise-sync:${SEMAPHORE_GIT_BRANCH} || true'
+            - 'docker build --cache-from=$DOCKER_USERNAME/adaptive-policy-ise-sync:${SEMAPHORE_GIT_BRANCH} -t $DOCKER_USERNAME/adaptive-policy-ise-sync:${SEMAPHORE_GIT_BRANCH} .'
+            - 'docker push $DOCKER_USERNAME/adaptive-policy-ise-sync:${SEMAPHORE_GIT_BRANCH}'
       secrets:
         - name: dockerhub
       prologue:
@@ -26,3 +26,5 @@ blocks:
           - pip install --cache-dir .pip_cache -r requirements.txt
           - 'python manage.py makemigrations '
           - python manage.py migrate
+    run:
+      when: branch = 'master'

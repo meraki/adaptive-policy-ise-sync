@@ -419,8 +419,8 @@ def run():
 
 def task():
     testthread = None
-    servers = ISEServer.objects.all()
     while True:
+        servers = ISEServer.objects.filter(pxgrid_enable=True)
         if len(servers) > 0:
             server = servers[0]
             if testthread:

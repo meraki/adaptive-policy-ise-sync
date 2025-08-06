@@ -1,0 +1,35 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+{% load static %}
+
+{% block content %}
+    {% if msg %}
+        <div class="md-alert-banner md-alert-banner--info">
+            <div class="md-alert-banner__text">{{ msg }}</div>
+        </div>
+        <br>
+    {% endif %}
+
+    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Technical Support</h4>
+    Click <a href="trbl-tech?action=file">here</a> to generate a diagnostic file to send to Technical Support.
+
+    <br><br>
+    <form class="md-panel__form" method="POST" action="trbl-tech">
+        <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Reset</h4>
+        {% csrf_token %}
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            <th style="width: 16rem"><button name="action" id="action" value="reset_all" class="md-button md-button--blue">Erase All Configuration</button></th>
+                        </tr>
+                        <tr>
+                            <th style="width: 16rem"><button name="action" id="action" value="reset_obj" class="md-button md-button--blue">Erase Synchronized Objects</button></th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
+    </form>
+{% endblock %}

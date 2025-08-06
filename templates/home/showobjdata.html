@@ -1,0 +1,27 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 4rem">Field</th>
+                        <th style="width: 32rem">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    <tr><td>Database ID</td><td>{{ data.id }}</td></tr>
+                    <tr><td>{{ data.generictype.significant_key_label }}</td><td>{{ data.get_significant_value }}</td></tr>
+                    <tr><td>Source</td><td>{{ data.element }}</td></tr>
+                    <tr><td>Source ID</td><td>{{ data.source_id }}</td></tr>
+                    <tr><td>Source Data</td><td><pre>{{ data.source_data|pretty_json|safe }}</pre></td></tr>
+{#                    <tr><td>Converted Data</td><td><pre>{{ data.converted_data|pretty_json|safe }}</pre></td></tr>#}
+                    <tr><td>Data Type</td><td>{{ data.generictype }}</td></tr>
+                    <tr><td>Associated Element</td><td>{{ data.generic }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

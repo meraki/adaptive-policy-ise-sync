@@ -12,7 +12,8 @@
                             <span style="float:left">ISE Server IP or FQDN</span>
                         </label>
                         <div class="md-input__wrapper">
-                            <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="iseIP" name="iseIP" placeholder="IP or FQDN" value="{{ data.ipaddress }}">
+                            <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="iseIP" name="iseIP" placeholder="IP or FQDN" value="{{ data.ipaddress }}" onchange="validateInput()">
+                            <input type="hidden" id="apiUrl" name="apiUrl">
                             <span class="md-input__after">
                                 <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('iseIP')">
                                     <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
@@ -27,7 +28,7 @@
                             <span style="float:left">ISE Server ERS Username</span>
                         </label>
                         <div class="md-input__wrapper">
-                            <input class="md-input md-input--after md-dirty" tabindex="20" type="text" id="iseUser" name="iseUser" placeholder="Username" value="{{ data.username }}">
+                            <input class="md-input md-input--after md-dirty" tabindex="20" type="text" id="iseUser" name="iseUser" placeholder="Username" value="{{ data.username }}" onchange="validateInput()">
                             <span class="md-input__after">
                                 <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="120" onclick="clearinput('iseUser')">
                                     <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
@@ -42,7 +43,7 @@
                             <span style="float:left">ISE Server ERS Password</span>
                         </label>
                         <div class="md-input__wrapper">
-                            <input type="password" class="md-input md-input--after md-dirty" tabindex="30" type="text" id="isePass" name="isePass" placeholder="Password" value="{{ data.password }}">
+                            <input type="password" class="md-input md-input--after md-dirty" tabindex="30" type="text" id="isePass" name="isePass" placeholder="Password" value="{{ data.password }}" onchange="validateInput()">
                             <span class="md-input__after">
                                 <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="130" onclick="clearinput('isePass')">
                                     <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
@@ -65,15 +66,55 @@
                         </div>
                     </div>
                 </div>
-                <div class="row"><br></div>
+                <div class="row" style="height:10px"></div>
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-6" id="orgcontainer" style="display:none;">
+                        <div id="orgcontent" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                            &nbsp;
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="height:10px"></div>
                 <div class="row" style="align-content:center; display:flex">
                     <div class="md-input-container columns medium-6">
                         <div class="md-input__wrapper">
-                            <button name="nextbtn" id="nextbtn" class="md-button md-button--blue" tabindex="50">Next</button>
+                            <button name="nextbtn" id="nextbtn" class="md-button md-button--disabled" tabindex="50">Next</button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        {% if data.ipaddress and data.username and data.password %}
+            <script>
+                let ip_addr = document.getElementById("iseIP");
+                if (ip_addr) {
+                    document.getElementById("apiUrl").value = "https://" + ip_addr.value + ":9060/ers/config/node/versioninfo"
+                }
+                getdata('/isecheck', 'apiUrl', 'iseUser', 2, 'isePass', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')
+            </script>
+        {% endif %}
     </form>
+    <script>
+        document.addEventListener('keydown', function (event) {
+          if (event.keyCode === 13 && event.target.nodeName === 'INPUT') {
+            var form = event.target.form;
+            var index = Array.prototype.indexOf.call(form, event.target);
+            form.elements[index + 1].focus();
+            event.preventDefault();
+          }
+        });
+
+        function validateInput() {
+            let ip_addr = document.getElementById("iseIP");
+            if (ip_addr) {
+                document.getElementById("apiUrl").value = "https://" + ip_addr.value + ":9060/ers/config/node/versioninfo"
+            }
+            let username = document.getElementById("iseUser");
+            let password = document.getElementById("isePass");
+            if (ip_addr && username && password) {
+                getdata('/isecheck', 'apiUrl', 'iseUser', 2, 'isePass', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')
+            }
+        }
+    </script>
+
 {% endblock %}

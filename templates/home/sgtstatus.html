@@ -1,6 +1,43 @@
 {% extends 'home/base.html' %}
+{% load extras %}
 
 {% block content %}
+    <form method="POST" action="/home/status-sgt" style="width:100%;padding:0px" id="filter-form-id">
+        {% csrf_token %}
+        <div class="md-input-group">
+            <div class="md-input__icon-container">
+                <div class="row" style="align-content:center; display:flex">
+                    <div class="md-input-container columns medium-12" id="filter-container">
+                        <div class="md-input__wrapper md-select">
+                            <button id="filter-button-id" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="filter-label-id" tabindex="30" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('filter-button-id', 'filter-dropdown-id', 'filter-list-id')">
+                                <span class="ignore md-button__children" style="opacity: 1;">
+                                    <div style="font-size: small" class="ignore md-list-item__left" id="filter-label-id">
+                                        {{ filter_name }}
+                                        <i class="ignore icon icon-arrow-down_16"></i>
+                                    </div>
+                                </span>
+                            </button>
+                            <div class="md-event-overlay md-event-overlay--bottom" id="filter-dropdown-id" style="display:none;">
+                                <div class="md-event-overlay__children" id="filter-list-id">
+                                    <div id="filter-content" class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                        {% for filter in filters %}
+                                        <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="0" title="{{ filter.description }}">
+                                            <div style="font-size: small" class="md-list-item__center" onclick="listclick('{{ filter.id }}', '{{ filter.description }}', 'filter-label-id', 'filter-id-id', 'filter-name-id', '');document.getElementById('filter-form-id').submit();">{{ filter.description }}</div>
+                                            <div class="md-list-item__right"></div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="filter-id-id" name="filter-id-id" />
+                    <input type="hidden" id="filter-name-id" name="filter-name-id" value="" />
+                </div>
+            </div>
+        </div>
+    </form>
+
     <div class="md-data-table" style="width:100%;border-color:gray;border-style:solid;border-width:1px">
         <div class="md-data-table__wrapper">
             <table class="testTableClass">
@@ -15,21 +52,22 @@
                              </div>
                         </th>
                         <th style="width: 4rem">Num</th>
+                        <th style="width: 6rem">Source</th>
                         <th style="width: 8rem">Name</th>
                         <th style="width: 12rem">Description</th>
                         <th style="width: 7rem">Matches?</th>
                         <th style="width: 12rem">Last Update</th>
-                        <th style="width: 16rem">ID</th>
-                        <th style="width: 4rem"></th>
+                        <th style="width: 4rem">Action</th>
                     </tr>
                 </thead>
                 <tbody class="md-data-table__tbody">
                     {% for d in data.sgt %}
-                        {% if d.do_sync %}
-                            <tr><td>
-                        {% else %}
-                            <tr style="background-color:#dedede"><td>
-                        {% endif %}
+{#                        {% if d.do_sync %}#}
+{#                            <tr><td>#}
+{#                        {% else %}#}
+{#                            <tr style="background-color:#dedede"><td>#}
+{#                        {% endif %}#}
+                        <tr style="background-color: {{ data.sgt|el_bgcolor:d }}"><td>
                             <div class="md-input-group md-checkbox">
                                 {% if d.do_sync %}
                                     <input id="check-{{ d.id }}" name="check-{{ d.id }}" type="checkbox" class="md-input md-checkbox__input startchecked" onchange="checkOpt('check-{{ d.id }}')" checked>
@@ -40,7 +78,12 @@
                                     <span>&nbsp;</span>
                                 </label>
                              </div>
-                        </td><td> {{ d.tag_number }} </td><td> {{ d.name }} </td><td> {{ d.description }} </td>
+                        </td>
+                        <td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.tag_number }} </a></td>
+                        <td>
+                            {{ d.syncsession }}
+                        </td>
+                        <td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.name }} </a></td><td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.description }} </a></td>
                         {% if d.do_sync %}
                             {% if d.objects_in_sync %}
                                 <td style="background-color:#55dd55"> {{ d.objects_in_sync }} </td>
@@ -62,7 +105,7 @@
                                 <td> Unknown</td>
                             {% endif %}
                         {% endif %}
-                        <td> {{ d.last_update }} </td><td><a href="{{ request.url }}?id={{ d.id }}"> {{ d.id }} </a></td><td><a href="/home/status-sgt" onclick="doDelete('sgt', '{{ d.id }}')"><span class="icon icon-delete_24"></span></a></td></tr>
+                        <td> {{ d.last_update }} </td><td><a href="/home/status-sgt" onclick="doDelete('sgt', '{{ d.id }}')"><span class="icon icon-delete_24"></span></a></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

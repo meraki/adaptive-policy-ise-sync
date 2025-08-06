@@ -30,9 +30,9 @@
                             <span style="float:left">Meraki Dashboard API Key</span>
                         </label>
                         <div class="md-input__wrapper">
-                            <input class="md-input md-input--after md-dirty" tabindex="20" type="text" id="apiKey" name="apiKey" placeholder="API Key" value="{{ data.apikey }}" onchange="getdata('/orgs', 'apiUrl', null, 1, 'apiKey', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')">
+                            <input class="md-input md-input--after md-dirty" tabindex="20" type="text" id="apiKey" name="apiKey" placeholder="API Key" value="{{ data.apikey }}" onchange="getdata('/orgs', 'apiUrl', '{{ org.orgid }}', 1, 'apiKey', 'orgcontainer', 'orgcontent', 'orglabel', 'orgid', 'orgname', 'nextbtn')">
                             <span class="md-input__after">
-                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="120" onclick="clearinput('apiKey')">
+                                <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="120" onclick="resetapikey('apiKey')">
                                     <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
                                 </button>
                             </span>
@@ -79,4 +79,21 @@
         <input type="hidden" id="orgid" name="orgid" value="{{ org.orgid }}" />
         <input type="hidden" id="orgname" name="orgname" value="" />
     </form>
+    <script>
+        document.addEventListener('keydown', function (event) {
+          if (event.keyCode === 13 && event.target.nodeName === 'INPUT') {
+            var form = event.target.form;
+            var index = Array.prototype.indexOf.call(form, event.target);
+            form.elements[index + 1].focus();
+            event.preventDefault();
+          }
+        });
+
+        function resetapikey(elementid) {
+            document.getElementById('orgcontainer').style = "display: none;";
+            document.getElementById("nextbtn").classList.add("md-button--disabled");
+            document.getElementById("nextbtn").classList.remove("md-button--blue");
+            clearinput(elementid)
+        }
+    </script>
 {% endblock %}

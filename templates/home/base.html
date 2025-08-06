@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 
@@ -5,7 +6,8 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://downloads.momentum-ui.com/@momentum-ui/core/css/momentum-ui.min.css" rel="stylesheet">
+    <link href="{% static "sync/momentum-ui.min.css" %}" rel="stylesheet">
+    <link href="{% static "sync/momentum-ui-icons.css" %}" rel="stylesheet">
     <title>Adaptive Policy Sync</title>
     <style>
         @media only screen and (min-width: 64.0625em) {
@@ -245,10 +247,10 @@
 </head>
 
 <body>
-    <div id="preloader" style="display: none;"><img src="https://apps.cisco.com/Commerce/staticContent/ngws_Q3FY20_V2/images/preloader.gif" /></div>
+    <div id="preloader" style="display: none;"><img src="{% static "sync/preloader.gif" %}" /></div>
     <div id="app" class="md md--sites">
         <div class="docs-main">
-            <header class="md-top-bar md-top-bar--dark" role="navigation">
+            <header class="md-top-bar md-top-bar--dark" role="navigation" style="position:fixed;top:0;z-index:1000">
                 <div class="md-top-bar__container">
                     <div class="md-top-bar__brand">
                         <span class="md-brand" href="/home">
@@ -311,13 +313,22 @@
                                 {% else %}
                                     <div id="statusmenu" class="md-sidebar-nav__group md-sidebar-nav__group--secondary md-sidebar-nav__group--collapsed">
                                 {% endif %}
-                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-1" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-1" data-md-keyboard-key="sgts" href="/home/status-sgt">
+{#                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-1" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-1" data-md-keyboard-key="sgts" href="/home/status-sgt">#}
+{#                                        <div class="md-list-item__center">SGTs</div>#}
+{#                                    </a>#}
+{#                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-3" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-3" data-md-keyboard-key="sgacls" href="/home/status-sgacl">#}
+{#                                        <div class="md-list-item__center">ACLs</div>#}
+{#                                    </a>#}
+{#                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-5" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-5" data-md-keyboard-key="policies" href="/home/status-policy">#}
+{#                                        <div class="md-list-item__center">Egress Policies</div>#}
+{#                                    </a>#}
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-7" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-7" data-md-keyboard-key="sgts" href="/home/status-obj?type=Tag">
                                         <div class="md-list-item__center">SGTs</div>
                                     </a>
-                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-3" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-3" data-md-keyboard-key="sgacls" href="/home/status-sgacl">
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-9" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-9" data-md-keyboard-key="sgacls" href="/home/status-obj?type=ACL">
                                         <div class="md-list-item__center">ACLs</div>
                                     </a>
-                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-5" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-5" data-md-keyboard-key="policies" href="/home/status-policy">
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-3-11" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-3-11" data-md-keyboard-key="policies" href="/home/status-obj?type=Policy">
                                         <div class="md-list-item__center">Egress Policies</div>
                                     </a>
                                 {% if menuopen == 1 %}
@@ -348,11 +359,48 @@
                                     <a class="md-list-item" id="md-sidebar__nav-item-1-6-5" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-6-5" data-md-keyboard-key="meraki-dashboard" href="/home/config-meraki">
                                         <div class="md-list-item__center">Meraki Dashboard</div>
                                     </a>
-                                    <a class="md-list-item" id="md-sidebar__nav-item-1-6-7" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-6-7" data-md-keyboard-key="synchronization" href="/home/config-sync">
+{#                                    <a class="md-list-item" id="md-sidebar__nav-item-1-6-7" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-6-7" data-md-keyboard-key="synchronization" href="/home/config-sync">#}
+{#                                        <div class="md-list-item__center">Old Sync.</div>#}
+{#                                    </a>#}
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-6-8" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-6-8" data-md-keyboard-key="synchronization" href="/home/config-elm-sync">
                                         <div class="md-list-item__center">Synchronization</div>
                                     </a>
                                     <a class="md-list-item" id="md-sidebar__nav-item-1-6-9" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-6-9" data-md-keyboard-key="backup-restore" href="/home/backup-restore">
                                         <div class="md-list-item__center">Backup/Restore</div>
+                                    </a>
+                                {% if menuopen == 1 %}
+                                    </div>
+                                {% else %}
+                                    </div>
+                                {% endif %}
+                                <div class="md-list-item" id="md-sidebar__nav-item-1-7" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-7" data-md-keyboard-key="troubleshooting" onclick="toggleMenu('trblmenu');">
+                                    <div class="md-list-item__left">
+                                        <i class="md-icon icon icon-tools_32" style="font-size: 20px;"></i>
+                                    </div>
+                                    <div class="md-list-item__center">Troubleshooting</div>
+                                    <div class="md-list-item__right">
+                                        <i class="md-icon icon icon-arrow-down_12" style="font-size: 12px;"></i>
+                                    </div>
+                                </div>
+                                {% if menuopen == 3 %}
+                                    <div id="trblmenu" class="md-sidebar-nav__group md-sidebar-nav__group--secondary md-sidebar-nav__group--expanded">
+                                {% else %}
+                                    <div id="trblmenu" class="md-sidebar-nav__group md-sidebar-nav__group--secondary md-sidebar-nav__group--collapsed">
+                                {% endif %}
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-7-1" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-7-1" data-md-keyboard-key="trbl-data" href="/home/trbl-data">
+                                        <div class="md-list-item__center">Data Pipeline</div>
+                                    </a>
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-7-3" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-7-3" data-md-keyboard-key="trbl-logs" href="/home/trbl-logs">
+                                        <div class="md-list-item__center">Logs</div>
+                                    </a>
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-7-4" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-7-4" data-md-keyboard-key="trbl-tech" href="/home/trbl-tech">
+                                        <div class="md-list-item__center">Tech. Support</div>
+                                    </a>
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-7-5" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-7-5" data-md-keyboard-key="trbl-load" href="/home/trbl-load">
+                                        <div class="md-list-item__center">Manual Dataset</div>
+                                    </a>
+                                    <a class="md-list-item" id="md-sidebar__nav-item-1-7-7" role="listitem" tabindex="-1" data-md-event-key="md-sidebar__nav-item-1-7-7" data-md-keyboard-key="trbl-admin" href="/home/trbl-admin">
+                                        <div class="md-list-item__center">DB Admin</div>
                                     </a>
                                 {% if menuopen == 1 %}
                                     </div>
@@ -365,7 +413,7 @@
                 </div>
             </div>
 
-            <ul class="md-breadcrumbs" style="grid-area: tabs;">
+            <ul class="md-breadcrumbs" style="grid-area: tabs;position:fixed;left:240px;top:75px;border-bottom:1px solid rgba(0, 0, 0, 0.08);width:100%;z-index:999;background-color:white">
 {#                <li><a href="javascript:void(0)">Home</a></li>#}
 {#                <li><a href="javascript:void(0)">Library</a></li>#}
 {#                <li class="current">Data</li>#}
@@ -374,8 +422,8 @@
 
 
 {#            <div class="md-page-header md-page-header--left"><div class="md-page-header__container "><div class="md-page-header__title">Components</div><h4 class="md-page-header__lead">Our basic building blocks for designing user interfaces. We provide usage guidelines and code snippets for each component.</h4></div><div style="position: fixed; display: none; z-index: 1200; top: 0px;" class="md-page-header__container "><div class="md-page-header__title">Components</div><h4 class="md-page-header__lead">Our basic building blocks for designing user interfaces. We provide usage guidelines and code snippets for each component.</h4></div></div>#}
-            <div class="docs-content-area">
-                <div class="docs-content-area docs-content-area">
+            <div class="docs-content-area" style="border-top:none !important">
+                <div class="docs-content-area" style="border-top:none !important">
                     <div class="docs-content__column row">
                         <div class="docs-section" id="default">
                             {% block content %}
@@ -419,7 +467,9 @@
                 }
             }, { threshold: [0] });
 
-            observer.observe(document.querySelector("#bottom_save"));
+            if(document.querySelector("#bottom_save")){
+                observer.observe(document.querySelector("#bottom_save"));
+            }
 
             document.body.addEventListener("click", function (evt) {
                 if (evt.target) {
