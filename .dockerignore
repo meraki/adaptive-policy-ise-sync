@@ -1,0 +1,6 @@
+old/
+sync/migrations/
+db.sqlite3
+*.log
+aps.tar
+aps.tar.gz

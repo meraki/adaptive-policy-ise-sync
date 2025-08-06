@@ -1,6 +1,7 @@
 # adaptive-policy-ise-sync<a name="top"/>
 
 ## Getting Started
+0) [Known Issues](#issues)
 1) Compatibility
     - [Cisco ISE](#compatibility-ise)
     - [Cisco Meraki](#compatibility-meraki)
@@ -18,6 +19,11 @@
     - [Using the UI](#ui-backup-restore)
     - [Using the API](#api-backup-restore)
 6) [Troubleshooting](#troubleshooting)
+
+### Known Issues<a name="issues"/>
+* No pxGrid support currently
+* API support is mostly broken right now
+* If you have two tags (SGTs) that are checked (so that they will synchronize) that do not initially have a policy, and you then create a new policy for them at the source, that doesn't get synchronoized correctly. Note: This is because the logic that sets do_sync on ACLs and Policies hasn't been triggered.
 
 ### Compatibility & Testing
 
@@ -39,25 +45,7 @@
 2) Current Code Coverage:
     - [Test Coverage](https://htmlpreview.github.io/?https://github.com/meraki/adaptive-policy-ise-sync/blob/master/htmlcov/index.html)
 3) Unit Test Summary:
-<pre>
-    - test_ise_dashboard_unable_to_sync_first   With ISE set to Authoritative Source, Dashboard should be unable to sync first
-    - test_ise_iseserver_can_sync               With ISE set to Authoritative Source, ISE should be able to sync first
-    - test_ise_dashboard_can_sync_next          With ISE set to Authoritative Source, Dashboard should be able to sync after ISE
-    - test_dashboard_ise_unable_to_sync_first   With Meraki Dashboard set to Authoritative Source, ISE should be unable to sync first
-    - test_dashboard_can_sync                   With Meraki Dashboard set to Authoritative Source, Dashboard should be able to sync first
-    - test_dashboard_ise_can_sync_next          With Meraki Dashboard set to Authoritative Source, ISE should be able to sync after Dashboard
-    - test_sgts_in_database                     Expected SGTs must have Dashboard and ISE IDs in the DB; Default SGTs must have ISE IDs in the DB
-    - test_sgacls_in_database                   Expected SGACLs must have ISE IDs in the DB; Default SGACLs must have ISE IDs in the DB
-    - test_policies_in_database                 Expected Policies must have ISE IDs in the DB; Default Policies must have ISE IDs in the DB
-    - test_ise_sync_success                     Perform a full sync and ensure SGTs, SGACLs and Policies have synced correctly
-    - test_update_element_success               Perform a full sync and then update each side for SGT, SGACL and Policy - change should replicate correctly
-    - test_update_element_revert                Perform a full sync and then update wrong side for SGT, SGACL and Policy - change should get reverted
-    - test_delete_element_success               Perform a full sync and then delete SGT, SGACL and Policy from each side - delete should replicate correctly
-    - test_delete_element_revert                Perform a full sync and then delete SGT, SGACL and Policy from each non-auth side - delete should get reverted
-    - PXGridTests                               Configure environment and sync, set SGTs to sync, sync again. Perform updates to SGT/SGACL/EgressPolicy, verify changes propegate via pxGri.
-    - APITests                                  Configure environment via API and sync, then set SGTs to sync via API. Verify changes replicate correctly. Test multiple Dashboard Orgs when ISE is auth source.
-    - BrowserTests                              Configure environment via AdP Sync Setup process and sync, then set SGTs to sync via UI. Verify changes replicate correctly.
-</pre> 
+No tests are being run on this version yet
        
 ### Set up your environment
 
@@ -70,6 +58,7 @@
 2) Create an [ERS Admin](https://community.cisco.com/t5/security-documents/ise-ers-api-examples/ta-p/3622623#toc-hId-1863715928) user account for ISE ERS access.
 
 ##### Cisco ISE pxGrid Support<a name="cisco-ise-pxgrid"/> ([^ Top](#top))
+_*Note: When using pxGrid, you should only run the container with MySQL (using docker-compose). The built-in SQLite database does not support concurrent writes, which are impossible to avoid with the pxGrid mechanism.*_
 1) If you plan to integrate with pxGrid for ISE Push-Notifications, you will need to create a new pxGrid Certificate for your application.
     - Navigate to ISE Admin GUI via any web browser and login
     - Navigate to Administration -> pxGrid Services
@@ -92,22 +81,22 @@
 
 #### Use Docker<a name="deploy-docker"/> ([^ Top](#top))
 ```
-mkdir $HOME/adaptivepolicy
-docker pull joshand/adaptive-policy-ise-sync:latest
+mkdir $HOME/adaptivepolicytest
+docker pull joshand/adaptive-policy-ise-sync:test
 docker run -it -p 8000:8020 \
      --restart unless-stopped \
-     --name=Adaptive-Policy-ISE-Sync \
+     --name=Adaptive-Policy-ISE-Sync-Test \
      -e DJANGO_SUPERUSER_USERNAME=admin \
      -e DJANGO_SUPERUSER_PASSWORD=password \
      -e DJANGO_SUPERUSER_EMAIL=admin@example.com \
      -e DJANGO_SUPERUSER_APIKEY=1234567890abcdefghijklmnopqrstuvwxyz1234 \
-     -v $HOME/adaptivepolicy:/opt/app/adaptive_policy_sync/config \
-     joshand/adaptive-policy-ise-sync:latest
+     -v $HOME/adaptivepolicytest:/opt/app/adaptive_policy_sync/config \
+     joshand/adaptive-policy-ise-sync:test
 ```
 
 #### Clone the Github repo and run locally<a name="deploy-local"/> ([^ Top](#top))
 ```
-git clone https://github.com/meraki/adaptive-policy-ise-sync.git
+git clone --branch test https://github.com/meraki/adaptive-policy-ise-sync.git
 cd adaptive-policy-ise-sync/
 virtualenv venv --python=python3
 source venv/bin/activate
@@ -124,6 +113,8 @@ Superuser created successfully.
 python manage.py drf_create_token admin
 Generated token 1234567890abcdefghijklmnopqrstuvwxyz1234 for user admin
 
+mkdir upload
+python manage.py loaddata base_db.json
 python manage.py runscript tasks &
 python manage.py runserver 8000
 ```
@@ -161,6 +152,7 @@ python manage.py runserver 8000
     ![aps-sgts](images/9-aps-sgts.png)
 
 ### Using the API<a name="configure-api"/> ([^ Top](#top))
+The API is currently not functional; instructions will be updated when it is
 * Above, you generated a new API token. You can use it with the API by passing it as an Authorization header as a Bearer token (Authorization: Bearer 1234567890abcdefghijklmnopqrstuvwxyz1234).
 
 #### Integrating Meraki Dashboard

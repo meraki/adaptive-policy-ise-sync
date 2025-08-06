@@ -42,5 +42,22 @@
                 </table>
             </div>
         </div>
+        <br><br>
+        <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Reset</h4>
+        {% csrf_token %}
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            <th style="width: 16rem"><button name="action" id="action" value="reset_all" class="md-button md-button--blue">Erase All Configuration</button></th>
+                        </tr>
+                        <tr>
+                            <th style="width: 16rem"><button name="action" id="action" value="reset_obj" class="md-button md-button--blue">Erase Synchronized Objects</button></th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+        </div>
     </form>
 {% endblock %}

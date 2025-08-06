@@ -1,9 +1,10 @@
 from rest_framework import viewsets
 from sync.serializers import UploadZipSerializer, UploadSerializer, DashboardSerializer, ISEServerSerializer, \
-    SyncSessionSerializer, TagSerializer, ACLSerializer, PolicySerializer, TaskSerializer, OrganizationSerializer, \
-    TagDataSerializer, ACLDataSerializer, PolicyDataSerializer
-from sync.models import UploadZip, Upload, Dashboard, ISEServer, SyncSession, Tag, ACL, Policy, Task, Organization, \
-    TagData, ACLData, PolicyData
+    TaskSerializer, OrganizationSerializer
+# from sync.serializers import SyncSessionSerializer, TagSerializer, ACLSerializer, PolicySerializer, TagDataSerializer, \
+#     ACLDataSerializer, PolicyDataSerializer
+from sync.models import UploadZip, Upload, Dashboard, ISEServer, Task, Organization
+# from sync.models import SyncSession, Tag, ACL, Policy, TagData, ACLData, PolicyData
 from django.db.models import Q
 from rest_framework.views import APIView
 from scripts.db_backup import backup
@@ -96,126 +97,126 @@ class ISEServerViewSet(viewsets.ModelViewSet):
 #     serializer_class = ISEMatrixSerializer
 
 
-class SyncSessionViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows Sync Session instances to be viewed, edited or deleted.
-
-    retrieve:
-    Return a Sync Session instance.
-
-    list:
-    Return all Sync Session instances.
-    """
-    queryset = SyncSession.objects.all().order_by('last_update')
-    serializer_class = SyncSessionSerializer
-
-
-class TagViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows tags (SGTs) to be viewed, edited or deleted.
-
-    retrieve:
-    Return a tag (SGT).
-
-    list:
-    Return all tags (SGTs).
-    """
-    queryset = Tag.objects.all().order_by('name')
-    serializer_class = TagSerializer
-
-    def get_queryset(self):
-        """
-        Optionally restricts the returned elements
-        """
-        queryset = Tag.objects.all()
-        parm0 = self.request.query_params.get('tag', None)
-        if parm0 is not None:
-            queryset = queryset.filter(tag_number__iexact=parm0)
-
-        return queryset
-
-
-class TagDataViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows tags (SGTs) data to be viewed.
-
-    retrieve:
-    Return tag (SGT) data.
-
-    list:
-    Return tag (SGTs) data.
-    """
-    queryset = TagData.objects.all().order_by('tag__name')
-    serializer_class = TagDataSerializer
-
-
-class ACLViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows ACLs (SGACLs) to be viewed, edited or deleted.
-
-    retrieve:
-    Return an ACL (SGACL).
-
-    list:
-    Return all ACLs (SGACLs).
-    """
-    queryset = ACL.objects.all().order_by('name')
-    serializer_class = ACLSerializer
-
-
-class ACLDataViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows ACLs (SGACLs) data to be viewed.
-
-    retrieve:
-    Return ACL (SGACL) data.
-
-    list:
-    Return ACLs (SGACLs) data.
-    """
-    queryset = ACLData.objects.all().order_by('acl__name')
-    serializer_class = ACLDataSerializer
-
-
-class PolicyViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows TrustSec policies to be viewed, edited or deleted.
-
-    retrieve:
-    Return a policy.
-
-    list:
-    Return all policies.
-    """
-    queryset = Policy.objects.all().order_by('name')
-    serializer_class = PolicySerializer
-
-    def get_queryset(self):
-        """
-        Optionally restricts the returned elements
-        """
-        queryset = Policy.objects.all()
-        parm0 = self.request.query_params.get('tag', None)
-        if parm0 is not None:
-            rq1 = "^" + parm0 + "-"
-            rq2 = "-" + parm0 + "$"
-            queryset = queryset.filter(Q(mapping__iregex=rq1) | Q(mapping__iregex=rq2))
-
-        return queryset
-
-
-class PolicyDataViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows TrustSec policy data to be viewed.
-
-    retrieve:
-    Return policy data.
-
-    list:
-    Return policies data.
-    """
-    queryset = PolicyData.objects.all().order_by('policy__name')
-    serializer_class = PolicyDataSerializer
+# class SyncSessionViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint that allows Sync Session instances to be viewed, edited or deleted.
+#
+#     retrieve:
+#     Return a Sync Session instance.
+#
+#     list:
+#     Return all Sync Session instances.
+#     """
+#     queryset = SyncSession.objects.all().order_by('last_update')
+#     serializer_class = SyncSessionSerializer
+#
+#
+# class TagViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint that allows tags (SGTs) to be viewed, edited or deleted.
+#
+#     retrieve:
+#     Return a tag (SGT).
+#
+#     list:
+#     Return all tags (SGTs).
+#     """
+#     queryset = Tag.objects.all().order_by('name')
+#     serializer_class = TagSerializer
+#
+#     def get_queryset(self):
+#         """
+#         Optionally restricts the returned elements
+#         """
+#         queryset = Tag.objects.all()
+#         parm0 = self.request.query_params.get('tag', None)
+#         if parm0 is not None:
+#             queryset = queryset.filter(tag_number__iexact=parm0)
+#
+#         return queryset
+#
+#
+# class TagDataViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint that allows tags (SGTs) data to be viewed.
+#
+#     retrieve:
+#     Return tag (SGT) data.
+#
+#     list:
+#     Return tag (SGTs) data.
+#     """
+#     queryset = TagData.objects.all().order_by('tag__name')
+#     serializer_class = TagDataSerializer
+#
+#
+# class ACLViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint that allows ACLs (SGACLs) to be viewed, edited or deleted.
+#
+#     retrieve:
+#     Return an ACL (SGACL).
+#
+#     list:
+#     Return all ACLs (SGACLs).
+#     """
+#     queryset = ACL.objects.all().order_by('name')
+#     serializer_class = ACLSerializer
+#
+#
+# class ACLDataViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint that allows ACLs (SGACLs) data to be viewed.
+#
+#     retrieve:
+#     Return ACL (SGACL) data.
+#
+#     list:
+#     Return ACLs (SGACLs) data.
+#     """
+#     queryset = ACLData.objects.all().order_by('acl__name')
+#     serializer_class = ACLDataSerializer
+#
+#
+# class PolicyViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint that allows TrustSec policies to be viewed, edited or deleted.
+#
+#     retrieve:
+#     Return a policy.
+#
+#     list:
+#     Return all policies.
+#     """
+#     queryset = Policy.objects.all().order_by('name')
+#     serializer_class = PolicySerializer
+#
+#     def get_queryset(self):
+#         """
+#         Optionally restricts the returned elements
+#         """
+#         queryset = Policy.objects.all()
+#         parm0 = self.request.query_params.get('tag', None)
+#         if parm0 is not None:
+#             rq1 = "^" + parm0 + "-"
+#             rq2 = "-" + parm0 + "$"
+#             queryset = queryset.filter(Q(mapping__iregex=rq1) | Q(mapping__iregex=rq2))
+#
+#         return queryset
+#
+#
+# class PolicyDataViewSet(viewsets.ModelViewSet):
+#     """
+#     API endpoint that allows TrustSec policy data to be viewed.
+#
+#     retrieve:
+#     Return policy data.
+#
+#     list:
+#     Return policies data.
+#     """
+#     queryset = PolicyData.objects.all().order_by('policy__name')
+#     serializer_class = PolicyDataSerializer
 
 
 class TaskViewSet(viewsets.ModelViewSet):

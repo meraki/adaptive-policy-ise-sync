@@ -1,0 +1,63 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+{% load static %}
+
+{% block content %}
+    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Data Pipeline</h4>
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 24rem">Element</th>
+                        <th style="width: 5rem">Ingestion</th>
+                        <th style="width: 5rem">Processing</th>
+                        <th style="width: 5rem">Analysis</th>
+                        <th style="width: 5rem">Synchronization</th>
+                        <th style="width: 5rem">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                {% for d in data %}
+                    <tr>
+                        <td>{{ d.element }}</td>
+                        {% if d.stages.s1 %}<td>{{ d.stages.s1|get_state_name|safe }}<br>{{ d.stages.s1.last_update }}</td>{% else %}<td>N/A</td>{% endif %}
+                        {% if d.stages.s2 %}<td>{{ d.stages.s2|get_state_name|safe }}<br>{{ d.stages.s1.last_update }}</td>{% else %}<td>N/A</td>{% endif %}
+                        {% if d.stages.s3 %}<td>{{ d.stages.s3|get_state_name|safe }}<br>{{ d.stages.s1.last_update }}</td>{% else %}<td>N/A</td>{% endif %}
+                        {% if d.stages.s4 %}<td>{{ d.stages.s4|get_state_name|safe }}<br>{{ d.stages.s1.last_update }}</td>{% else %}<td>N/A</td>{% endif %}
+                        <td>
+                            <a href="/home/trbl-logs?filter-id-id={{ d.obj_id }}"><span title="View Logs" class="icon icon-archive_20"></span></a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    function getLog(data) {
+        document.getElementById("logdata").innerHTML = "<pre>" + atob(data) + "</pre>";
+        document.getElementById("logmodal").style = "display:inline;";
+    }
+    </script>
+
+    <div id="logmodal" class="md-modal__backdrop fade in" style="display:none; width: 100px;height: 50px;position:fixed; top: calc(50% - 25px);left: calc(50% - 50px);">
+        <div role="dialog" id="react-aria-modal-dialog" class="md-modal md-modal--default in" aria-labelledby="modal1">
+            <div class="md-modal__content">
+                <div class="md-modal__flex-container">
+                    <div class="md-modal__header">
+                        <span class="md-modal__title">Organization Data</span>
+                        <button type="button" class="md-close md-modal__close" onclick="document.getElementById('logmodal').style = 'display:none;'"></button>
+                    </div>
+                    <div id="logdata" class="md-modal__body"></div>
+                    <div class="md-modal__footer">
+                        <button class="md-button md-button--36 md-button--blue" alt="Submit Form" type="button" aria-label="Submit Form">
+                            <span class="md-button__children" onclick="document.getElementById('logmodal').style = 'display:none;'">OK</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

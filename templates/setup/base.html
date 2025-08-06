@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 
@@ -5,7 +6,8 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://downloads.momentum-ui.com/@momentum-ui/core/css/momentum-ui.min.css" rel="stylesheet">
+    <link href="{% static "sync/momentum-ui.min.css" %}" rel="stylesheet">
+    <link href="{% static "sync/momentum-ui-icons.css" %}" rel="stylesheet">
     <title>Adaptive Policy Sync</title>
     <script>
         function clearinput(inputid) {
@@ -41,7 +43,7 @@
             let request = new XMLHttpRequest();
             let apikey = document.getElementById(tokenid).value;
             let apibaseurl = document.getElementById(apiurl).value;
-            console.log(apibaseurl);
+            {#console.log(apibaseurl);#}
             request.onload = function () {
                 if (request.readyState === 4) {
                     if (request.status === 200) {
@@ -66,8 +68,27 @@
                                         }
                                     }
                                 }
+                                else if (outtype === 2) {
+                                    console.log(data[elm])
+                                    if (data[elm].hasOwnProperty('error')) {
+                                        out_data += '<div class="md-alert-banner md-alert-banner--error">';
+                                        out_data += '  <div class="md-alert-banner__text">Unable to Contact ISE</div>';
+                                        if (enablebtn) {
+                                            document.getElementById(enablebtn).classList.add("md-button--disabled");
+                                            document.getElementById(enablebtn).classList.remove("md-button--blue");
+                                        }
+                                    } else {
+                                        out_data += '<div class="md-alert-banner md-alert-banner--info">';
+                                        out_data += '  <div class="md-alert-banner__text">Successfuly Contacted ISE</div>';
+                                        out_data += '</div>';
+                                        if (enablebtn) {
+                                            document.getElementById(enablebtn).classList.remove("md-button--disabled");
+                                            document.getElementById(enablebtn).classList.add("md-button--blue");
+                                        }
+                                    }
+                                }
                             }
-                            if (outtype === 1) {
+                            if (outtype === 1 || outtype === 2) {
                                 outcont.style = "display:inline;";
                                 outdata.innerHTML = out_data;
                             }
@@ -82,8 +103,15 @@
             };
             try {
                 request.open(method, url, async);
-                request.setRequestHeader("X-Cisco-Meraki-API-URL", apibaseurl);
-                request.setRequestHeader("X-Cisco-Meraki-API-Key", apikey);
+                if (outtype === 2) {
+                    let selval = document.getElementById(selectedval).value;
+                    request.setRequestHeader("X-ISE-URL", apibaseurl);
+                    request.setRequestHeader("X-ISE-Username", selval);
+                    request.setRequestHeader("X-ISE-Password", apikey);
+                } else if (outtype === 1) {
+                    request.setRequestHeader("X-Cisco-Meraki-API-URL", apibaseurl);
+                    request.setRequestHeader("X-Cisco-Meraki-API-Key", apikey);
+                }
                 request.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
                 request.responseType = 'json';
                 request.send();
@@ -106,10 +134,10 @@
 </head>
 
 <body>
-    <div id="preloader" style="display: none;"><img src="https://apps.cisco.com/Commerce/staticContent/ngws_Q3FY20_V2/images/preloader.gif" /></div>
+    <div id="preloader" style="display: none;"><img src="{% static "sync/preloader.gif" %}" /></div>
     <div class="md-panel md-panel--form md-panel--full">
         <div class="md-panel__main">
-            <img alt="" class="md-panel__image" src="https://meraki.cisco.com/img/cisco-meraki-logo.png">
+            <img alt="" class="md-panel__image" src="{% static "sync/cisco-meraki-logo.png" %}">
             <div class="md-tab md-tab--pills md-tab--justified" type="pills">
                 <ul class="md-tab__list" role="tab">
                     {% if active == 1 %}

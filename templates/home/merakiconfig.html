@@ -2,142 +2,189 @@
 {% load extras %}
 
 {% block content %}
-    <form method="POST" action="/home/config-meraki" style="width:100%;padding:0px">
-        <div class="md-data-table" style="width: 100%;">
-            <div class="md-data-table__wrapper">
-                Meraki Dashboard Configuration
-                <table class="testTableClass">
-                    <tbody class="md-data-table__tbody">
-                    {% for i in data %}
-                        <tr>
-                            <td style="width: 4rem">Description</td>
-                            <td style="width: 24rem">
-                                <div class="md-input__wrapper">
-                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intDesc-{{ i.id }}" name="intDesc-{{ i.id }}" placeholder="Meraki Dashboard Description" value="{{ i.description|default_if_none:'' }}">
-                                    <span class="md-input__after">
-                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intDesc-{{ i.id }}')">
-                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
-                                        </button>
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="width: 4rem">Base API URL</td>
-                            <td style="width: 24rem">
-                                <div class="md-input__wrapper">
-                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intURL-{{ i.id }}" name="intURL-{{ i.id }}" placeholder="Base API URL" value="{{ i.baseurl|default_if_none:'https://api.meraki.com/api/v1' }}">
-                                    <span class="md-input__after">
-                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intURL-{{ i.id }}')">
-                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
-                                        </button>
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="width: 4rem">API Key</td>
-                            <td style="width: 24rem">
-                                <div class="md-input__wrapper">
-                                    <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intKey-{{ i.id }}" name="intKey-{{ i.id }}" placeholder="API Key" value="{{ i.apikey|default_if_none:''|apikey }}">
-                                    <span class="md-input__after">
-                                        <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intKey-{{ i.id }}')">
-                                            <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
-                                        </button>
-                                    </span>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="width: 4rem">Force Re-sync</td>
-                            <td style="width: 24rem">
-                                <div class="md-input-container md-checkbox">
-                                    {% if i.force_rebuild %}
-                                        <input name="intRebuild-{{ i.id }}" id="intRebuild-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input" checked>
-                                    {% else %}
-                                        <input name="intRebuild-{{ i.id }}" id="intRebuild-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input">
+    {% if dashboard_id %}
+        <form method="POST" action="/home/config-meraki" style="width:100%;padding:0px">
+            <div class="md-data-table" style="width: 100%;">
+                <div class="md-data-table__wrapper">
+                    Meraki Dashboard Configuration  <a onclick="getLog('{{ i.raw_data|base64encode }}')"><span class="icon icon-file-text_24"></span></a>
+                    <table class="testTableClass">
+                        <tbody class="md-data-table__tbody">
+                            <tr>
+                                <td style="width: 4rem">Ingest From Account</td>
+                                <td style="width: 24rem">
+                                    <div class="md-input-container md-checkbox">
+                                        {% if i.enabled %}
+                                            <input name="intEnabled-{{ i.id }}" id="intEnabled-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input" checked>
+                                        {% else %}
+                                            <input name="intEnabled-{{ i.id }}" id="intEnabled-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input">
+                                        {% endif %}
+                                        <label class="md-checkbox__label" for="intEnabled-{{ i.id }}">
+                                            <span>Enabled</span>
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 4rem">Description</td>
+                                <td style="width: 24rem">
+                                    <div class="md-input__wrapper">
+                                        <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intDesc-{{ i.id }}" name="intDesc-{{ i.id }}" placeholder="Meraki Dashboard Description" value="{{ i.description|default_if_none:'' }}">
+                                        <span class="md-input__after">
+                                            <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intDesc-{{ i.id }}')">
+                                                <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 4rem">Base API URL</td>
+                                <td style="width: 24rem">
+                                    <div class="md-input__wrapper">
+                                        <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intURL-{{ i.id }}" name="intURL-{{ i.id }}" placeholder="Base API URL" value="{{ i.baseurl|default:'https://api.meraki.com/api/v1' }}">
+                                        <span class="md-input__after">
+                                            <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intURL-{{ i.id }}')">
+                                                <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 4rem">API Key</td>
+                                <td style="width: 24rem">
+                                    <div class="md-input__wrapper">
+                                        <input class="md-input md-input--after md-dirty" tabindex="10" type="text" id="intKey-{{ i.id }}" name="intKey-{{ i.id }}" placeholder="API Key" value="{{ i.apikey|default:''|apikey }}">
+                                        <span class="md-input__after">
+                                            <button class="md-button md-button--36 md-button--icon md-input__icon-clear" id="md-button-50" data-md-event-key="md-button-50" alt="clear input" type="button" aria-label="clear input" aria-pressed="" tabindex="110" onclick="clearinput('intKey-{{ i.id }}')">
+                                                <span class="md-button__children" style="opacity: 1;"><i class="md-icon icon icon-clear-active_16" style="font-size: 16px;"></i></span>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 4rem">Force Re-sync</td>
+                                <td style="width: 24rem">
+                                    <div class="md-input-container md-checkbox">
+                                        {% if i.force_rebuild %}
+                                            <input name="intRebuild-{{ i.id }}" id="intRebuild-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input" checked>
+                                        {% else %}
+                                            <input name="intRebuild-{{ i.id }}" id="intRebuild-{{ i.id }}" type="checkbox" class="md-input md-checkbox__input">
+                                        {% endif %}
+                                        <label class="md-checkbox__label" for="intRebuild-{{ i.id }}">
+                                            <span>Enabled</span>
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 4rem">
+                                    Organizations
+                                    {% if i.raw_data %}
+                                      <a title="Add Organization" onclick="loadModal('{{ i.id }}')"><span class="icon icon-document-create_16"></span></a>
                                     {% endif %}
-                                    <label class="md-checkbox__label" for="intRebuild-{{ i.id }}">
-                                        <span>Enabled</span>
-                                    </label>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="width: 4rem">
-                                Organizations
-                                {% if i.raw_data %}
-                                  <a title="Add Organization" onclick="loadModal('{{ i.id }}')"><span class="icon icon-document-create_16"></span></a>
-                                {% endif %}
-                            </td>
-                            <td style="width: 24rem">
-                                {% if i.raw_data %}
-                                    <table class="testTableClass">
-                                        <thead class="md-data-table__thead">
-                                            <tr>
-                                                <th style="width: 12rem">Organization ID</th>
-                                                <th style="width: 16rem">Organization Name</th>
-                                                <th style="width: 4rem">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="md-data-table__tbody">
-                                            {% for org in i.organization.all %}
-                                            <tr>
-                                                <td>
-                                                    {{ org.orgid }}
-                                                </td>
-                                                <td>
-                                                    &nbsp;
-                                                    {{ i.raw_data|search:org.orgid }}
-                                                </td>
-                                                <td>
-                                                    <a onclick="getLog('{{ org.raw_data }}')"><span class="icon icon-file-text_24"></span></a>
-                                                    <a href="/home/config-meraki?id={{ org.id }}&action=delorg"><span class="icon icon-delete_24"></span></a>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                {% else %}
-                                    Please save first, then you can add Organizations
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="width: 4rem">Last Update</td>
-                            <td style="width: 24rem">
-                                {{ i.last_update }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="width: 4rem">Last Sync</td>
-                            <td style="width: 24rem">
-                                {{ i.last_sync }}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                                </td>
+                                <td style="width: 24rem">
+                                    {% if i.raw_data %}
+                                        <table class="testTableClass">
+                                            <thead class="md-data-table__thead">
+                                                <tr>
+                                                    <th style="width: 12rem">Organization ID</th>
+                                                    <th style="width: 16rem">Organization Name</th>
+                                                    <th style="width: 4rem">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="md-data-table__tbody">
+                                                {% for org in i.organization.all %}
+                                                <tr>
+                                                    <td>
+                                                        {{ org.orgid }}
+                                                    </td>
+                                                    <td>
+                                                        &nbsp;
+                                                        {{ i.raw_data|search:org.orgid }}
+                                                    </td>
+                                                    <td>
+                                                        <a onclick="getLog('{{ org.raw_data|base64encode }}')"><span class="icon icon-file-text_24"></span></a>
+                                                        <a href="/home/config-meraki?id={{ org.id }}&action=delorg"><span class="icon icon-delete_24"></span></a>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    {% else %}
+                                        Please save first, then you can add Organizations
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 4rem">Last Update</td>
+                                <td style="width: 24rem">
+                                    {{ i.last_update }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 4rem">Last Sync</td>
+                                <td style="width: 24rem">
+                                    {{ i.last_sync }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-        <div class="row">&nbsp;</div>
-        <div id="bottom_save">
-            <div class="md-panel md-panel__form" style="width:100%;padding:0px">
-                {% csrf_token %}
-                <div class="md-input-group" style="width:100%;padding:20px;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
-                    <div class="md-input__icon-container">
-                        <div class="row" style="align-content:center; display:flex">
-                            <div class="md-input-container columns medium-6">
-                                <div class="md-input__wrapper">
-                                    <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="/home/config-meraki">cancel</a>
+            <div class="row">&nbsp;</div>
+            <div id="bottom_save">
+                <div class="md-panel md-panel__form" style="width:100%;padding:0px">
+                    {% csrf_token %}
+                    <div class="md-input-group" style="width:100%;padding:20px;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
+                        <div class="md-input__icon-container">
+                            <div class="row" style="align-content:center; display:flex">
+                                <div class="md-input-container columns medium-6">
+                                    <div class="md-input__wrapper">
+                                        <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="/home/config-meraki">cancel</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </form>
+    {% else %}
+        <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Meraki Dashboard Accounts  <a title="Add Account" href="/home/config-meraki?id=new"><span class="icon icon-document-create_16"></span></a></h4>
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            <th style="width: 12rem">Description</th>
+                            <th style="width: 24rem">API URL</th>
+                            <th style="width: 6rem">Enabled</th>
+                            <th style="width: 6rem">Status</th>
+                            <th style="width: 6rem">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="md-data-table__tbody">
+                        {% for s in dashboards %}
+                            <tr>
+                                <td><a href="/home/config-meraki?id={{ s.id }}&action=edit"> {{ s.description }} </a></td>
+                                <td> {{ s.baseurl }} </td>
+                                <td> {{ s.enabled }} </td>
+                                <td> {{ s.get_status }}</td>
+                                <td>
+{#                                    <a title="Edit Configuration" href="/home/config-ise?id={{ s.id }}&action=edit"><span class="icon icon-edit_24"></span></a>#}
+                                    <a onclick="getLog('{{ s.raw_data|base64encode }}')"><span class="icon icon-file-text_24"></span></a>
+                                    <a href="/home/config-meraki?action=del&id={{ s.id }}"><span class="icon icon-delete_24"></span></a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </form>
+    {% endif %}
 
     <script>
     function loadModal(om_id) {
@@ -145,8 +192,8 @@
     }
 
     function getLog(data) {
-        let new_dat = data.replaceAll("\"", '"').replaceAll("\n", "\\n");
-        document.getElementById("logdata").innerHTML = "<pre>" + JSON.stringify(JSON.parse(new_dat), null, 4) + "</pre>";
+        let new_data = JSON.stringify(JSON.parse(atob(data)), null, 4);
+        document.getElementById("logdata").innerHTML = "<pre>" + new_data + "</pre>";
         document.getElementById("logmodal").style = "display:inline;";
     }
     </script>
@@ -172,7 +219,6 @@
 
     <form method="POST" action="/home/config-meraki?action=addorg" style="width:100%;padding:0px">
         {% csrf_token %}
-        {% for i in data %}
         <div id="orgmodal-{{ i.id }}" class="md-modal__backdrop fade in" style="display:none; width: 100px;height: 50px;position:fixed; top: calc(50% - 25px);left: calc(50% - 50px);">
             <div role="dialog" id="react-aria-modal-dialog" class="md-modal md-modal--default in" aria-labelledby="modal1">
                 <div class="md-modal__content">
@@ -226,6 +272,5 @@
                 </div>
             </div>
         </div>
-        {% endfor %}
     </form>
 {% endblock %}

@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 
@@ -5,7 +6,8 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://downloads.momentum-ui.com/@momentum-ui/core/css/momentum-ui.min.css" rel="stylesheet">
+    <link href="{% static "sync/momentum-ui.min.css" %}" rel="stylesheet">
+    <link href="{% static "sync/momentum-ui-icons.css" %}" rel="stylesheet">
     <title>Adaptive Policy Sync</title>
     <script>
         function clearinput(inputid) {
@@ -18,7 +20,7 @@
 <body>
     <div class="md-panel md-panel--form md-panel--full">
         <div class="md-panel__main">
-            <img alt="" class="md-panel__image" src="https://meraki.cisco.com/img/cisco-meraki-logo.png">
+            <img alt="" class="md-panel__image" src="{% static "sync/cisco-meraki-logo.png" %}">
             {% block content %}
             {% endblock %}
        </div>

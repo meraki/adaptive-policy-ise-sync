@@ -1,9 +1,11 @@
-from sync.models import SyncSession, TagData, ACLData, PolicyData
+from sync.models import SyncSession, TagData, ACLData, PolicyData, Dashboard, DataPipeline
 from django.db.models import F, Q
 from django.utils.timezone import make_aware
 import datetime
 import json
-from scripts.db_trustsec import clean_sgts, clean_sgacls, clean_sgpolicies, merge_sgts, merge_sgacls, merge_sgpolicies
+from scripts.db_trustsec import clean_sgts, clean_sgacls, clean_sgpolicies, merge_sgts, merge_sgacls, \
+    merge_sgpolicies, parse_sgt_data, parse_sgacl_data, parse_sgpolicy_data, clean_sgt_data, clean_sgacl_data, \
+    clean_sgpolicy_data
 from scripts.dblog import append_log, db_log
 import meraki
 from scripts.meraki_addons import meraki_read_sgt, meraki_read_sgacl, meraki_read_sgpolicy, meraki_update_sgt, \
@@ -13,20 +15,67 @@ from django.conf import settings
 import traceback
 
 
-def ingest_dashboard_data(accounts, log):
+def new_ingest_dashboard_data(org, log):
+    append_log(log, "dashboard_monitor::new_ingest_dashboard_data::Organization -", org)
+    dt = make_aware(datetime.datetime.now())
+    a = org.dashboard_set.first()
+    append_log(log, "dashboard_monitor::new_ingest_dashboard_data::Resync -", a.description)
+    dashboard = meraki.DashboardAPI(base_url=a.baseurl, api_key=a.apikey, print_console=False, output_log=False,
+                                    caller=settings.CUSTOM_UA, suppress_logging=True)
+
+    org_id = org.orgid
+    db_orgs = dashboard.organizations.getOrganizations()
+    sgts = meraki_read_sgt(dashboard, org_id)
+    sgacls = meraki_read_sgacl(dashboard, org_id)
+    sgpolicies = meraki_read_sgpolicy(dashboard, org_id)
+    append_log(log, "dashboard_monitor::new_ingest_dashboard_data::SGTs - ", len(sgts))
+    append_log(log, "dashboard_monitor::new_ingest_dashboard_data::SGACLs - ", len(sgacls))
+    append_log(log, "dashboard_monitor::new_ingest_dashboard_data::Policies - ", len(sgpolicies))
+    a.raw_data = db_orgs
+    a.save()
+    org.raw_data = {"groups": sgts, "acls": sgacls, "bindings": sgpolicies}
+    org.force_rebuild = False
+    org.last_read = dt
+    org.skip_sync = True
+    org.save()
+
+
+def process_dashboard_data(org, log):
+    if org.raw_data:
+        parse_sgt_data("meraki", org, org.raw_data["groups"], log)
+        parse_sgacl_data("meraki", org, org.raw_data["acls"], log)
+        parse_sgpolicy_data("meraki", org, org.raw_data["bindings"], log)
+
+        clean_sgt_data("meraki", org, org.raw_data["groups"], log)
+        clean_sgacl_data("meraki", org, org.raw_data["acls"], log)
+        clean_sgpolicy_data("meraki", org, org.raw_data["bindings"], log)
+
+
+def ingest_dashboard_data(accounts, log, dash_only=False):
     append_log(log, "dashboard_monitor::ingest_dashboard_data::Accounts -", accounts)
     dt = make_aware(datetime.datetime.now())
 
     for sa in accounts:
-        if not sa.sync_enabled:
-            append_log(log, "dashboard_monitor::digest_database_data::sync session not set to allow sync;")
-            return
+        if not dash_only:
+            if not sa.sync_enabled:
+                append_log(log, "dashboard_monitor::digest_database_data::sync session not set to allow sync;")
+                return
 
-        a = sa.dashboard
-        append_log(log, "dashboard_monitor::ingest_dashboard_data::Resync -", a.description)
-        dashboard = meraki.DashboardAPI(base_url=a.baseurl, api_key=a.apikey, print_console=False, output_log=False,
-                                        caller=settings.CUSTOM_UA, suppress_logging=True)
-        orgs = a.organization.all()
+            a = sa.dashboard
+            append_log(log, "dashboard_monitor::ingest_dashboard_data::Resync -", a.description)
+            dashboard = meraki.DashboardAPI(base_url=a.baseurl, api_key=a.apikey, print_console=False, output_log=False,
+                                            caller=settings.CUSTOM_UA, suppress_logging=True)
+            orgs = a.organization.all()
+            src = not sa.ise_source
+        else:
+            # orgs = [sa]
+            # db = sa.dashboard_set[0]
+            db = sa
+            orgs = db.organization.all()
+            dashboard = meraki.DashboardAPI(base_url=db.baseurl, api_key=db.apikey, print_console=False, output_log=False,
+                                            caller=settings.CUSTOM_UA, suppress_logging=True)
+            src = False
+
         if orgs:
             for org in orgs:
                 org_id = org.orgid
@@ -38,13 +87,13 @@ def ingest_dashboard_data(accounts, log):
                 append_log(log, "dashboard_monitor::ingest_dashboard_data::SGACLs - ", len(sgacls))
                 append_log(log, "dashboard_monitor::ingest_dashboard_data::Policies - ", len(sgpolicies))
 
-                merge_sgts("meraki", sgts, not sa.ise_source, sa, log, org)
-                merge_sgacls("meraki", sgacls, not sa.ise_source, sa, log, org)
-                merge_sgpolicies("meraki", sgpolicies, not sa.ise_source, sa, log, org)
+                merge_sgts("meraki", sgts, src, sa, log, org)
+                merge_sgacls("meraki", sgacls, src, sa, log, org)
+                merge_sgpolicies("meraki", sgpolicies, src, sa, log, org)
 
-                clean_sgts("meraki", sgts, not sa.ise_source, sa, log, org)
-                clean_sgacls("meraki", sgacls, not sa.ise_source, sa, log, org)
-                clean_sgpolicies("meraki", sgpolicies, not sa.ise_source, sa, log, org)
+                clean_sgts("meraki", sgts, src, sa, log, org)
+                clean_sgacls("meraki", sgacls, src, sa, log, org)
+                clean_sgpolicies("meraki", sgpolicies, src, sa, log, org)
 
                 org.raw_data = json.dumps({"groups": sgts, "acls": sgacls, "bindings": sgpolicies})
                 org.force_rebuild = False
@@ -52,8 +101,12 @@ def ingest_dashboard_data(accounts, log):
                 org.last_update = dt
                 org.skip_sync = True
                 org.save()
-                sa.dashboard.last_sync = dt
-                sa.dashboard.save()
+                if dash_only:
+                    sa.last_sync = dt
+                    sa.save()
+                else:
+                    sa.dashboard.last_sync = dt
+                    sa.dashboard.save()
         else:
             append_log(log, "dashboard_monitor::ingest_dashboard_data::No OrgId present")
 
@@ -268,6 +321,10 @@ def sync_dashboard():
     msg = "SYNC_DASHBOARD-NO_ACTION_REQUIRED"
     append_log(log, "dashboard_monitor::sync_dashboard::Checking Dashboard Accounts for re-sync...")
 
+    no_ss = Dashboard.objects.filter(syncsession__isnull=True)
+    append_log(log, "dashboard_monitor::sync_dashboard::Dashboard accounts not in session...", no_ss)
+    ingest_dashboard_data(no_ss, log, org_only=True)
+
     # If we know that something needs to be created, do that first.
     sss = SyncSession.objects.all()
     for ss in sss:
@@ -331,4 +388,57 @@ def sync_dashboard():
 
 
 def run():     # pragma: no cover
-    sync_dashboard()
+    # sync_dashboard()
+    read_meraki()
+
+
+def run_meraki_processing():
+    dashboards = Dashboard.objects.all()
+    for dashboard in dashboards:
+        for organization in dashboard.organization.all():
+            log = []
+            append_log(log, "dashboard_monitor::run_meraki_processing::Parsing data into individual elements...")
+            try:
+                process_dashboard_data(organization, log)
+                DataPipeline.objects.update_or_create(organization=organization, stage=2, defaults={"state": 5})
+
+                dt = make_aware(datetime.datetime.now())
+                organization.last_processed = dt
+                organization.save()
+            except Exception:
+                append_log(log, "dashboard_monitor::run_meraki_processing::Exception caught:", traceback.format_exc())
+                DataPipeline.objects.update_or_create(organization=organization, stage=2, defaults={"state": 4})
+
+            append_log(log, "dashboard_monitor::run_meraki_processing::Done")
+            db_log("dashboard_monitor", log, organization=organization, append_old=False)
+
+
+def run_meraki_ingestion():
+    dashboards = Dashboard.objects.all()
+    for dashboard in dashboards:
+        for organization in dashboard.organization.all():
+            log = []
+            append_log(log, "dashboard_monitor::run_meraki_ingestion::Checking Dashboard Accounts for re-sync...")
+            if dashboard.enabled:
+                DataPipeline.objects.update_or_create(organization=organization, stage=1, defaults={"state": 2})
+                try:
+                    new_ingest_dashboard_data(organization, log)
+                    DataPipeline.objects.update_or_create(organization=organization, stage=1, defaults={"state": 5})
+                except Exception:
+                    append_log(log, "dashboard_monitor::run_meraki_ingestion::Exception caught:", traceback.format_exc())
+                    DataPipeline.objects.update_or_create(organization=organization, stage=1, defaults={"state": 4})
+
+                dt = make_aware(datetime.datetime.now())
+                organization.last_read = dt
+                organization.save()
+            else:
+                append_log(log, "dashboard_monitor::run_meraki_ingestion::This account is disabled; skipping.")
+                DataPipeline.objects.update_or_create(organization=organization, stage=1, defaults={"state": 3})
+
+            append_log(log, "dashboard_monitor::run_meraki_ingestion::Done")
+            db_log("dashboard_monitor", log, organization=organization, append_old=False)
+
+
+def read_meraki(data=None):
+    run_meraki_ingestion()
+    run_meraki_processing()

@@ -1,0 +1,2 @@
+#!/bin/bash
+(cd adaptive_policy_sync; python manage.py runscript cli)

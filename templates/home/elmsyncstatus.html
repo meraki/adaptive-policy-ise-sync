@@ -1,0 +1,84 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    <style>
+        .match_table {
+            font-size: xx-small !important;
+        }
+        .match_tr {
+            font-size: xx-small !important;
+        }
+        .match_td {
+            font-size: xx-small !important;
+            padding: 5px;
+        }
+        .match_th {
+            font-size: xx-small !important;
+        }
+    </style>
+
+    {% for dtype, dvals in data.objects.items %}
+        <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Sync Preview -- {{ dtype }} Objects</h4>
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            <th style="width: 10rem">{{ dvals|get_key_label }}</th>
+                            {% for el in data.elements.all %}
+                            <th style="width: 8rem">{{ el }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="md-data-table__tbody">
+                        {% for key, values in dvals.items %}
+                            <tr style="background-color: {{ values.0.get_bg_color }}">
+                                <td>{{ key }}</td>
+                                {% for el in data.elements.all %}
+                                    <td>
+                                    {{ values|lookup_val:el|safe }}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <br><br>
+    {% endfor %}
+
+    <script>
+    function showtooltip(data) {
+        let new_data = atob(data);
+        document.getElementById("content").innerHTML = new_data;
+        document.getElementById("tooltip").style = "display:inline;";
+    }
+    function hidetooltip() {
+        document.getElementById("tooltip").style = "display:none;";
+    }
+    function toggletooltip(data) {
+        let x = document.getElementById("tooltip");
+        if (window.getComputedStyle(x).display === "none") {
+            let new_data = atob(data);
+            document.getElementById("content").innerHTML = new_data;
+            document.getElementById("tooltip").style = "display:inline;";
+        } else {
+            document.getElementById("tooltip").style = "display:none;";
+        }
+    }
+    </script>
+
+    <div id="tooltip" class="md-modal__backdrop" style="display:none" onclick="toggletooltip('');">
+        <div role="dialog" id="react-aria-modal-dialog" class="md-modal md-modal--default in" aria-labelledby="modal1" style="width:800px;height:50px;position:absolute;top:auto;left:auto">
+            <div class="md-modal__content" style="min-height:100px;text-indent:10px">
+                <div class="tt_content sm" id="content" style="font-size:xx-small !important"></div>
+            </div>
+        </div>
+    </div>
+
+{#    <script>#}
+{#        showtooltip(btoa("<table class='match_table'><tr class='match_tr'><th class='match_th'>Source</th><th class='match_th'>Name</th><th class='match_th'>Cleaned Name</th><th class='match_th'>Description</th><th class='match_th'>Fuzzy Description</th><th class='match_th'>Pending Delete</th></tr><tr class='match_tr'><td class='match_td'><a href='/home/status-sgt-data?id=1aa9edba-b82f-437c-9525-40ddfdb9dc9b'>ISE 2.7 (10.102.172.125) : Branch_Servers (602)</a></td><td class='match_td'>TrustSec_Devices</td><td class='match_td'>TrustSec_Devices</td><td class='match_td'>TrustSec Devices Security Group</td><td class='match_td'>trustsec devices security group</td><td class='match_td'>False</td></tr><tr class='match_tr'><td class='match_td'><a href='/home/s-sgt-data?id=8c1f8ddd-797c-422e-b32d-a4d4c1cd2469'>Meraki-Josh Anderson (215643) : Infrastructure (2)</a></td><td class='match_td'>Infrastructure</td><td class='match_td'>Infrastructure</td><td class='match_td'>Created by Meraki, the Infrastructure group is used by Meraki devices for internal and dashboard communication</td><td class='match_td'>created by meraki the infrastructure group is used by meraki devices for internal and dashboard communication</td><td class='match_td'>False</td></tr><tr class='match_tr'><td class='match_td'><i>Matches?</i></td><td class='match_td'>False</td><td class='match_td'>False</td><td class='match_td'>False</td><td class='match_td'>False</td><td class='match_td'>True</td></tr></table><hr><b><u>NOTE:THIS TAG (2) WILL ALWAYS RETURN matches=True. WE DO NOT WANT TO SYNC IT.</b></u>"))#}
+{#    </script>#}
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+{% load static %}
+
+{% block content %}
+    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Imported Datasets</h4>
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 8rem">Date/Time</th>
+                        <th style="width: 8rem">Type</th>
+                        <th style="width: 8rem">Description</th>
+                        <th style="width: 6rem">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                {% for d in data.ise %}
+                    <tr>
+                        <td>{{ d.last_update }}</td>
+                        <td>ISE Server</td>
+                        <td>{{ d }}</td>
+                        <td>
+                            <a onclick="getLog('{{ d.raw_data|base64encode }}')"><span class="icon icon-file-text_24"></span></a>
+                            <a href="/home/trbl-load?action=del&id=ise~{{ d.id }}"><span class="icon icon-delete_24"></span></a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                {% for d in data.org %}
+                    <tr>
+                        <td>{{ d.last_update }}</td>
+                        <td>Meraki Organization</td>
+                        <td>{{ d }}</td>
+                        <td>
+                            <a onclick="getLog('{{ d.raw_data|base64encode }}')"><span class="icon icon-file-text_24"></span></a>
+                            <a href="/home/trbl-load?action=del&id=org~{{ d.id }}"><span class="icon icon-delete_24"></span></a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h4 class="md-h4--bold md-font-color--alternate docs-section__title">Import New Dataset</h4>
+    <form method="POST" action="/home/trbl-load" style="width:100%;padding:0px">
+        <div class="md-data-table" style="width: 100%;">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            <th style="width: 24rem">JSON Configuration</th>
+                        </tr>
+                    </thead>
+                    <tbody class="md-data-table__tbody">
+                        <tr>
+                            <td>
+                                <textarea name="config-data" id="config-data" style="width:100%" rows="20"></textarea>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row">&nbsp;</div>
+        <div id="bottom_save">
+            <div class="md-panel md-panel__form" style="width:100%;padding:0px">
+                {% csrf_token %}
+                <div class="md-input-group" style="width:100%;padding:20px;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
+                    <div class="md-input__icon-container">
+                        <div class="row" style="align-content:center; display:flex">
+                            <div class="md-input-container columns medium-6">
+                                <div class="md-input__wrapper">
+                                    <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="/home">cancel</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <script>
+    function getLog(data) {
+        let new_data = JSON.stringify(JSON.parse(atob(data)), null, 4);
+        document.getElementById("logdata").innerHTML = "<pre>" + new_data + "</pre>";
+        document.getElementById("logmodal").style = "display:inline;";
+    }
+    </script>
+
+    <div id="logmodal" class="md-modal__backdrop fade in" style="display:none; width: 100px;height: 50px;position:fixed; top: calc(50% - 25px);left: calc(50% - 50px);">
+        <div role="dialog" id="react-aria-modal-dialog" class="md-modal md-modal--default in" aria-labelledby="modal1">
+            <div class="md-modal__content">
+                <div class="md-modal__flex-container">
+                    <div class="md-modal__header">
+                        <span class="md-modal__title">Element Data</span>
+                        <button type="button" class="md-close md-modal__close" onclick="document.getElementById('logmodal').style = 'display:none;'"></button>
+                    </div>
+                    <div id="logdata" class="md-modal__body"></div>
+                    <div class="md-modal__footer">
+                        <button class="md-button md-button--36 md-button--blue" alt="Submit Form" type="button" aria-label="Submit Form">
+                            <span class="md-button__children" onclick="document.getElementById('logmodal').style = 'display:none;'">OK</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

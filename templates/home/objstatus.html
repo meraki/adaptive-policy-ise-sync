@@ -1,0 +1,192 @@
+{% extends 'home/base.html' %}
+{% load extras %}
+
+{% block content %}
+    {% if id %}
+    <form class="md-panel__form" method="POST" action="{{ baseurl }}">
+    {% csrf_token %}
+    <div class="md-data-table" style="width: 100%;">
+        <div class="md-data-table__wrapper">
+            <table class="testTableClass">
+                <thead class="md-data-table__thead">
+                    <tr>
+                        <th style="width: 4rem">Field</th>
+                        <th style="width: 32rem">Value</th>
+                    </tr>
+                </thead>
+                <tbody class="md-data-table__tbody">
+                    <tr><td>Database ID</td><td>{{ data.id }}</td></tr>
+                    {% if data.err_disabled %}
+                    <tr bgcolor="#f08080"><td>Disabled by Error?</td><td>
+                        {{ data.err_disabled }}&nbsp;&nbsp;&nbsp;<button name="action" id="action" value="reset_error" class="md-button md-button--blue">Reset</button>
+                    </td></tr>
+                    {% else %}
+                    <tr><td>Disabled by Error?</td><td>{{ data.err_disabled }}</td></tr>
+                    {% endif %}
+                    <tr><td>Key Value</td><td>{{ data.key_value }}</td></tr>
+                    <tr><td>Name</td><td>{{ data.name }}</td></tr>
+                    <tr><td>Safe Name</td><td>{{ data|clean:"name" }}</td></tr>
+                    <tr><td>Description</td><td>{{ data.description }}</td></tr>
+                    <tr><td>Safe Description</td><td>{{ data|clean:"description" }}</td></tr>
+                    <tr><td>Sync Enabled</td><td>{{ data.do_sync }}</td></tr>
+                    <tr><td>Sync Session</td><td>{{ data.elementsync }}</td></tr>
+                    <tr><td>Origin</td><td>{{ data.element }}</td></tr>
+                    <tr><td>Objects</td><td>{{ data.get_objects|make_list|safe }}</td></tr>
+{#                    <tr><td>Delete?</td><td>{{ data.push_delete }}</td></tr>#}
+                    <tr><td>Last Update</td><td>{{ data.last_api_push }}</td></tr>
+                    <tr><td>Match Report</td><td>{{ data.match_report.1|safe }}</td></tr>
+                    <tr><td>Calc'd Changes</td><td>{{ data.get_changes|list_to_ul|safe }}</td></tr>
+                    <tr><td>History<br><button name="action" id="action" value="clear_history" class="md-button md-button--blue">Clear</button></td><td>{{ data.update_history|linebreaksbr }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </form>
+    {% else %}
+        <form method="POST" action="{{ baseurl }}" style="width:100%;padding:0px" id="filter-form-id">
+            {% csrf_token %}
+            <div class="md-input-group">
+                <div class="md-input__icon-container">
+                    <div class="row" style="align-content:center; display:flex">
+                        <div class="md-input-container columns medium-12" id="filter-container">
+                            <div class="md-input__wrapper md-select">
+                                <button id="filter-button-id" class="ignore md-button md-button--36 active" alt="" type="button" aria-labelledby="filter-label-id" tabindex="30" name="md-select-69" aria-haspopup="listbox" onclick="toggleList('filter-button-id', 'filter-dropdown-id', 'filter-list-id')">
+                                    <span class="ignore md-button__children" style="opacity: 1;">
+                                        <div style="font-size: small" class="ignore md-list-item__left" id="filter-label-id">
+                                            {{ filter_name }}
+                                            <i class="ignore icon icon-arrow-down_16"></i>
+                                        </div>
+                                    </span>
+                                </button>
+                                <div class="md-event-overlay md-event-overlay--bottom" id="filter-dropdown-id" style="display:none;">
+                                    <div class="md-event-overlay__children" id="filter-list-id">
+                                        <div id="filter-content" class="md-list md-list--vertical md-list" role="listbox" aria-labelledby="md-select-69__label" aria-multiselectable="false">
+                                            {% for filter in filters %}
+                                            <div aria-current="true" class="md-list-item" id="md-list-73__so-item" role="option" tabindex="0" title="{{ filter.description }}">
+                                                <div style="font-size: small" class="md-list-item__center" onclick="listclick('{{ filter.id }}', '{{ filter.description }}', 'filter-label-id', 'filter-id-id', 'filter-name-id', '');document.getElementById('filter-form-id').submit();">{{ filter.description }}</div>
+                                                <div class="md-list-item__right"></div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="filter-id-id" name="filter-id-id" />
+                        <input type="hidden" id="filter-name-id" name="filter-name-id" value="" />
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="md-data-table" style="width:100%;border-color:gray;border-style:solid;border-width:1px">
+            <div class="md-data-table__wrapper">
+                <table class="testTableClass">
+                    <thead class="md-data-table__thead">
+                        <tr>
+                            {% if obj_type.has_manual_sync %}
+                            <th style="width: 2rem">
+                                <div class="md-input-group md-checkbox">
+                                    <input id="check-all" name="check-all" type="checkbox" class="md-input md-checkbox__input" onchange="checkAll('md-checkbox__input', 'check-all')">
+                                    <label class="md-checkbox__label" for="check-all">
+                                        <span>&nbsp;</span>
+                                    </label>
+                                 </div>
+                            </th>
+                            {% endif %}
+                            <th style="width: 8rem">{{ obj_type.significant_key_label }}</th>
+                            <th style="width: 6rem">Source</th>
+                            <th style="width: 8rem">Name</th>
+                            <th style="width: 12rem">Description</th>
+                            <th style="width: 7rem">Matches?</th>
+                            <th style="width: 12rem">Last Sync Push</th>
+                            <th style="width: 4rem">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="md-data-table__tbody">
+                        {% for d in data.obj %}
+    {#                        {% if d.do_sync %}#}
+    {#                            <tr><td>#}
+    {#                        {% else %}#}
+    {#                            <tr style="background-color:#dedede"><td>#}
+    {#                        {% endif %}#}
+                            <tr style="background-color: {{ d.get_bg_color }}">
+                            {% if obj_type.has_manual_sync %}
+                            <td>
+                                <div class="md-input-group md-checkbox">
+                                    {% if d.do_sync %}
+                                        <input id="check-{{ d.id }}" name="check-{{ d.id }}" type="checkbox" class="md-input md-checkbox__input startchecked" onchange="checkOpt('check-{{ d.id }}')" checked>
+                                    {% else %}
+                                        <input id="check-{{ d.id }}" name="check-{{ d.id }}" type="checkbox" class="md-input md-checkbox__input startunchecked" onchange="checkOpt('check-{{ d.id }}')">
+                                    {% endif %}
+                                    <label class="md-checkbox__label" for="check-{{ d.id }}">
+                                        <span>&nbsp;</span>
+                                    </label>
+                                 </div>
+                            </td>
+                            {% endif %}
+                            <td><a href="{{ baseurl }}&id={{ d.id }}">{{ d.get_significant_value }}</a></td>
+                            <td>
+                                {{ d.elementsync }}
+                            </td>
+                            <td><a href="{{ baseurl }}&id={{ d.id }}"> {{ d.name }} </a></td><td><a href="{{ baseurl }}&id={{ d.id }}"> {{ d.description }} </a></td>
+                            {% if d.do_sync %}
+                                {{ d.match_cell|safe }}
+{#                                {% if d.objects_in_sync %}#}
+{#                                    <td style="background-color:#55dd55"> {{ d.objects_in_sync }} </td>#}
+{#                                {% elif d.object_update_target == "meraki" %}#}
+{#                                    <td style="background-color:#dd5555"> Meraki Missing </td>#}
+{#                                {% elif d.object_update_target == "ise" %}#}
+{#                                    <td style="background-color:#dd5555"> ISE Missing</td>#}
+{#                                {% else %}#}
+{#                                    <td style="background-color:#dd5555"> Unknown</td>#}
+{#                                {% endif %}#}
+                            {% else %}
+                                <td> </td>
+                            {% endif %}
+                            <td> {{ d.last_api_push }} </td><td><a href="{{ base_url }}" onclick="doDelete('sgt', '{{ d.id }}')"><span class="icon icon-delete_24"></span></a></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="row">&nbsp;</div>
+        <form method="POST" action="/home/objsave?type={{ obj_type.name }}" style="width:100%;padding:0px">
+            <div id="bottom_save" style="display:none">
+                <div class="md-panel md-panel__form" style="width:100%;padding:0px">
+                    {% csrf_token %}
+                    <div class="md-input-group" style="width:100%;padding:20px;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
+                        <div class="md-input__icon-container">
+                            <div class="row" style="align-content:center; display:flex">
+                                <div class="md-input-container columns medium-6">
+                                    <div class="md-input__wrapper">
+                                        <button class="md-button md-button--blue" tabindex="50">Save Changes</button> or <a href="{{ baseurl }}">cancel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="corner_save" style="display:none">
+                <div class="md-panel__form" style="position:fixed;bottom:0;right:0;background-color:transparent;margin:0 0 0 0">
+                    {% csrf_token %}
+                    <div class="md-input-group" style="width:250px;padding:20px 0 20px 0;background-color:#FFF5E0;border-color:#cbb013;border-width:1px;border-style:solid">
+                        <div class="md-input__icon-container">
+                            <div class="row" style="align-content:center;display:flex">
+                                <div class="md-input-container columns medium-6" style="margin:0 0 0 0">
+                                    <div class="md-input__wrapper" style="text-align:center;white-space:nowrap;">
+                                        <b style="font-size:14px">You have unsaved changes.</b><br>
+                                        <button name="savebtn" id="savebtn" class="md-button md-button--blue" tabindex="50">Save</button> or <a href="{{ baseurl }}">cancel</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="addlist" name="addlist" value="" />
+                    <input type="hidden" id="sublist" name="sublist" value="" />
+                </div>
+            </div>
+        </form>
+    {% endif %}
+{% endblock %}
